@@ -77,6 +77,6 @@ scratch versions you already wrote).
 
 ## 6. Open decisions for Tal
 
-1. Main run size: ~350M on ~20B tokens (~$500 cap) or ~124–200M improved model (~$250)?
+1. ~~Main run size~~ DECIDED 2026-11-13: ~350M on ~20B tokens, ~$500 cap.
 2. Tokenizer: keep GPT-2's (clean comparison) or train your own (more "yours")?
 3. Course name/slug: `gpt-capstone-course` OK?
