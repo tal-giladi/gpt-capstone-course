@@ -21,6 +21,12 @@ sources:
     url: https://docs.runpod.io/pods/templates/secrets
   - title: "RunPod pod pricing and billing"
     url: https://docs.runpod.io/pods/pricing
+  - title: "Vast.ai CLI: stop instance (CONTAINER_ID / CONTAINER_API_KEY inside an instance)"
+    url: https://docs.vast.ai/cli/reference/stop-instance
+  - title: "Vast.ai: managing instances (stopped instances keep billing storage)"
+    url: https://docs.vast.ai/instances/managing-instances
+  - title: "Lambda: terminate an instance with the Cloud API"
+    url: https://docs.lambda.com/api/cloud
   - title: "CUDA Toolkit 13.0 release notes (minimum driver)"
     url: https://docs.nvidia.com/cuda/archive/13.0.0/cuda-toolkit-release-notes/
   - title: "PyTorch: CUDA 13.0 as the stable PyPI wheels"
@@ -47,6 +53,7 @@ You launch a 1×H100 SXM RunPod pod from your own saved template, confirm it is 
 
 | Choice | Options | Pick for this lesson |
 |---|---|---|
+| Provider | RunPod (Community $2.69 / Secure $4.39), Vast.ai verified host (H100 SXM from ~$1.87, median ~$2.40), Lambda ($4.29, $4.89 from 2026-11-16), Verda ($5.189) | **RunPod**: the steps below use its templates, secrets and `runpodctl`. On another provider the steps are the same except the three noted in step 2 |
 | GPU | H100 SXM ($2.69 Community / $4.39 Secure), H100 PCIe ($1.99 / $2.89), RTX 4090 ($0.34 / $0.89) | **H100 SXM**: same chip as the 8-GPU nodes, so 04.3's numbers transfer |
 | Cloud tier | Community (cheaper, single hosts) or Secure (datacenter) | **Community** if an H100 SXM with CUDA 13 is listed, else Secure |
 | Image | Official RunPod PyTorch templates (Ubuntu 22.04/24.04, CUDA 12.9/13.0/13.2 variants) or a custom image | Official PyTorch template with a **CUDA 13.x** tag; the project installs its own pinned torch into a venv anyway, the image only provides drivers, SSH and tools |
@@ -96,6 +103,29 @@ echo "hard stop armed for $(date -u -d '+3 hours' +%H:%M) UTC"
 ```
 
 This is the pattern from RunPod's own docs. Inside a pod `RUNPOD_POD_ID` and a pod-scoped API key are already set, so `runpodctl` can stop its own pod. Whatever happens next, this pod cannot run for more than 3 hours.
+
+#### On another provider
+
+Three things change; everything from step 3 on is the same once the variables from your `r2.env` and `secrets.env` are loaded (`scp` them over, then `set -a; . ~/r2.env; . ~/secrets.env; set +a`).
+
+| Provider | Image | Stop command for the hard stop and the idle guard (step 9) | Finish (step 10) |
+|---|---|---|---|
+| **RunPod** | Official PyTorch template, CUDA 13.x | `runpodctl pod stop $RUNPOD_POD_ID` | Terminate |
+| Vast.ai | A PyTorch template with CUDA 13; filter offers for driver ≥ 580 | `vastai destroy instance $CONTAINER_ID --api-key $CONTAINER_API_KEY` (both variables are set inside the instance; the key can only act on this instance). Use `stop` instead of `destroy` only if you must keep the disk: a stopped instance still bills it | Destroy (the guard already did, or do it in the console) |
+| Lambda | Default Lambda Stack image (check `nvidia-smi` shows driver ≥ 580) | `curl -X POST https://cloud.lambda.com/api/v1/instance-operations/terminate -H "Authorization: Bearer $LAMBDA_API_KEY" -H 'Content-Type: application/json' -d '{"instance_ids":["<id>"]}'` with the instance id from the dashboard. The key can launch machines on your card: create it for this box only and delete it afterwards | Terminate; `shutdown` inside the VM does not stop billing |
+
+The `--stop-cmd` of `autoshutdown.sh` takes any of these strings.
+
+**Test your fallback's stop path before you need it (optional, ~$0.10–0.50).** Module 5 and 07.1 rely on the fallback provider stopping itself, and a command you have never run is not a guard. Rent the cheapest GPU there for ten minutes (a Vast.ai RTX 4090 is ~$0.35–0.50/h; on Lambda the cheapest 1-GPU instance), load nothing, and arm a 2-minute hard stop with that provider's command:
+
+```bash
+# Vast.ai
+nohup bash -c 'sleep 120; vastai destroy instance $CONTAINER_ID --api-key $CONTAINER_API_KEY' >/tmp/hardstop.log 2>&1 &
+# Lambda (API key created for this test only; instance id from the dashboard)
+nohup bash -c 'sleep 120; curl -s -X POST https://cloud.lambda.com/api/v1/instance-operations/terminate -H "Authorization: Bearer $LAMBDA_API_KEY" -H "Content-Type: application/json" -d "{\"instance_ids\":[\"<id>\"]}"' >/tmp/hardstop.log 2>&1 &
+```
+
+Within ~3 minutes your SSH session drops and the console shows the instance destroyed (Vast.ai) or terminated (Lambda), with billing stopped. If it does not, read `/tmp/hardstop.log` before you leave the box: fix the command now, not on the night of an 8×H100 run. Delete the Lambda API key afterwards and add a ledger line.
 
 ### 3. Connect over SSH (2 min)
 

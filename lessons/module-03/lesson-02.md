@@ -15,6 +15,8 @@ sources:
     url: https://www.hetzner.com/cloud/regular-performance/
   - title: "Hetzner Cloud general-purpose (CCX) prices"
     url: https://www.hetzner.com/cloud/general-purpose/
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
   - title: "RunPod pod pricing and billing"
     url: https://docs.runpod.io/pods/pricing
   - title: "tiktoken (GPT-2 encoding)"
@@ -39,7 +41,7 @@ Your bucket holds `tok/gpt2-10BT/` (~10.0B tokens, ~20 GB) and `tok/bpe32k-100BT
 - The CPU box and `tokenizers/bpe32k/` from [03.1](lesson-01.md) (or recreate the box and pull the tokenizer: `bash scripts/sync.sh pull-tokenizer tokenizers/bpe32k`).
 - The raw files in `r2:mygpt/raw/fineweb-edu/` from [02.3](../module-02/lesson-03.md).
 - About 4 hours, of which you are needed for ~45 minutes; the rest runs in tmux.
-- **Expected cost: about $0.50–1.00** (3–4 h of a Hetzner CPX62 at €0.1779/h).
+- **Expected cost: about $0.50–1.00** (3–4 h of a Hetzner CPX62 at €0.1779/h; ~$2–3 on a RunPod CPU pod or DigitalOcean droplet).
 
 ## Choices and costs
 
@@ -59,6 +61,7 @@ From those, ESTIMATES for both sets (10B GPT-2 + ~22.5B own tokens), assuming ~0
 | **Hetzner CPX62**, 16 shared vCPU, 32 GB, 640 GB | €0.1779 | ~2.8 h | ~0.3 h | ~3.5 h | **~€0.62 (~$0.72)** |
 | Hetzner CCX43, 16 dedicated, 64 GB, 360 GB | €0.3766 | ~1.9 h | ~0.2 h | ~2.5 h | ~€0.94 |
 | Hetzner CCX63, 48 dedicated, 192 GB, 960 GB | €1.1626 | ~0.6 h | ~0.1 h | ~1.1 h | ~€1.28 |
+| DigitalOcean CPU-Optimized, 32 vCPU / 64 GiB, 400 GiB | $1.00 | ~1.4 h | ~0.15 h | ~2 h | ~$2 |
 | RunPod CPU pod, 32 vCPU, ≥ 200 GB disk | ~$1.0–1.3 (estimate, check the console) | ~1.4 h | ~0.15 h | ~2 h | ~$2–2.60 |
 
 The work is a fixed number of core-hours, so what matters is the price per core-hour: more cores at the same per-core price cost the same and finish sooner. Dedicated cores cost about twice as much per core-hour as shared ones but run faster, so the bigger boxes end up somewhat more expensive in total. Every option stays under about $3; pick by availability and how long you want to wait. The CPX62 from 03.1 is the default; CCX types showed "currently unavailable" on 2026-11-13.
@@ -170,7 +173,7 @@ Copy the two `meta.json` files and the logs into `reports/` (for example `cp dat
 | `No space left on device` | Small disk (RunPod default 20 GB container disk, or a smaller Hetzner type) | Use ≥ 250 GB disk; on a small box delete `data/raw/sample-10BT` after the GPT-2 set is uploaded and checked |
 | Killed with `Out of memory` | Too many workers for the RAM of a small box (each holds a tokenizer and batches) | Fewer workers, or a box with ≥ 2 GB RAM per worker |
 | SSH dropped and the run stopped | Not started inside tmux | Restart in tmux; a stopped run must start over into an empty folder |
-| Box still listed after you finished | Powered off instead of deleted | `hcloud server delete mygpt-cpu`; check the console list is empty |
+| Box still listed after you finished | Powered off instead of deleted | `hcloud server delete mygpt-cpu` (DigitalOcean: `doctl compute droplet delete mygpt-cpu`; RunPod: Terminate in the console); check the console list is empty |
 
 ## Artifact
 

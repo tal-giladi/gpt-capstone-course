@@ -19,6 +19,8 @@ sources:
     url: https://www.runpod.io/pricing
   - title: "Lambda pricing"
     url: https://lambda.com/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
 last_verified: "2026-11-13"
 ---
 
@@ -72,6 +74,14 @@ Example: $r = 175{,}000$, $p = 4.39$, $s = 0.9$ gives $4.39 \times 10^9 / (3600 
 | B200 Community $5.98 / Secure $7.99 | optional | 2.3× the dense peak at ~1.8× the price; only a measurement shows if a 350M model can use it |
 | H100 PCIe Community $1.99 / Secure $2.89 | optional | Cheaper per hour for 1-GPU ablations, if its dollars per billion tokens come out lower |
 
+| Where to rent the benchmark box (1×H100 SXM, checked 2026-11-13) | $/GPU-h | Trade-off |
+|---|---|---|
+| **RunPod Community** | $2.69 | Your template from 04.2; recommended |
+| Vast.ai verified host | from ~$1.87, median ~$2.40 | Cheaper; run `gpu_check.py` first, hosts vary more (stop command: 04.2) |
+| Lambda | $4.29 ($4.89 from 2026-11-16) | Same chip as Lambda's 8× nodes, so benchmark here if Lambda will run your baseline |
+
+The tokens/s you measure is a property of the chip and the code, so a healthy H100 SXM on any provider gives the same number; what changes between providers is the price you plug in.
+
 > [!NOTE]
 > Use the price you will actually pay for each run, not this table: the 1-GPU price for ablations and the 8-GPU node's per-GPU price for the baseline and main run. Re-check both on the live pages (Lambda's prices rise on 2026-11-16) and update `budget.md`.
 
@@ -93,13 +103,13 @@ cd ~/mygpt && . .venv/bin/activate && tmux new -s bench
 
 ```bash
 rclone lsf r2:mygpt/tok/                      # your shard folders from Module 3
-rclone copy r2:mygpt/tok/<baseline-folder>/ <data_dir of baseline_124m.yaml> \
+rclone copy r2:mygpt/tok/gpt2-10BT/ data/tok/gpt2-10BT \
   --include "meta.json" --include "val_*" --include "train_00000[0-1].bin" --multi-thread-streams 8
-rclone copy r2:mygpt/tok/<main-folder>/ <data_dir of main_350m.yaml> \
-  --include "meta.json" --include "val_*" --include "train_00000[0-1].bin" --multi-thread-streams 8
+rclone copy r2:mygpt/tok/bpe32k-100BT-30/ data/tok/bpe32k-100BT-30 \
+  --include "meta.json" --include "tokenizer.json" --include "val_*" --include "train_00000[0-1].bin" --multi-thread-streams 8
 ```
 
-Two training shards (200M tokens each) are far more than 30 steps need. Use the `data_dir` paths written in the configs, so the benchmark reads data exactly as training will.
+Two training shards (100M tokens each) are far more than 30 steps need. The local paths are the `data_dir` values in the configs (`baseline_124m.yaml` reads `data/tok/gpt2-10BT`; `ablation_base.yaml` and `main_350m.yaml` read `data/tok/bpe32k-100BT-30`), so the benchmark reads data exactly as training will.
 
 ### 3. Benchmark the three configs (15 min)
 

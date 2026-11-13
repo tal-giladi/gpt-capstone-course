@@ -5,7 +5,7 @@ Helpers for lessons 02.2 and 02.3. The project code itself (`scripts/download_fi
 
 | File | Used in | What it does |
 |---|---|---|
-| `r2.env.example` | 02.2 | rclone remote `r2` configured only through environment variables. Copy it outside the repo, fill in your R2 keys, `chmod 600`. |
+| `r2.env.example` | 02.2 | rclone remote `r2` configured only through environment variables. Copy it outside the repo, fill in your R2 keys, `chmod 600`. Commented blocks at the end configure B2, Hetzner, Wasabi, S3, GCS or an HF Storage Bucket behind the same remote name `r2`. |
 | `fineweb_manifest.py` | 02.3 | Checks downloaded FineWeb-Edu parquet files (size + sha256) against the Hugging Face repo at a fixed commit and writes a JSON manifest. |
 | `DATA_CARD.template.md` | 02.3 | Template for the `DATA_CARD.md` artifact of the module. |
 

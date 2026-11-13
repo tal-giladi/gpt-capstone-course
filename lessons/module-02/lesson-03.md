@@ -23,6 +23,12 @@ sources:
     url: https://www.hetzner.com/cloud/regular-performance/
   - title: "RunPod pod pricing and billing"
     url: https://docs.runpod.io/pods/pricing
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
+  - title: "DigitalOcean Droplet billing (powered-off Droplets are billed)"
+    url: https://docs.digitalocean.com/products/droplets/details/pricing/
+  - title: "Hugging Face Storage Buckets (server-side copy from dataset repos)"
+    url: https://huggingface.co/docs/hub/storage-buckets
   - title: "rclone S3 backend (multipart upload tuning)"
     url: https://rclone.org/s3/
 last_verified: "2026-11-13"
@@ -54,6 +60,7 @@ The job is bandwidth and disk, not CPU: download ~93 GB, hash it, upload ~93 GB.
 | **Hetzner Cloud CPX62, Helsinki** (16 vCPU, 32 GB) | €0.1779/h excl. VAT (~$0.21/h), billed hourly, capped monthly | 640 GB NVMe, 20 TB traffic included | **Recommended.** Cheap, big local disk, fast data-centre links. The same box type tokenizes in Module 3. New accounts can need ID verification; some types show "unavailable" in some locations |
 | Hetzner Cloud CPX42 / CPX52 | €0.0953 / €0.1370 per hour | 320 / 480 GB, 20 TB | Also enough for this lesson; fewer cores for Module 3 |
 | RunPod CPU pod | Shown in the console when you deploy (per-vCPU pricing, billed per second) | Container disk $0.10/GB-month while running; no ingress/egress fees | Fine if you already have RunPod credit; give it >= 120 GB container disk |
+| DigitalOcean CPU-Optimized droplet, 16 vCPU / 32 GiB | $0.50/h | 200 GiB SSD, 7,000 GiB outbound transfer | Simple signup; disk just big enough for this lesson (Module 3 needs more). A powered-off droplet still bills: destroy it |
 | At home | $0 | Your disk; your ISP's upload | Only if 02.2 measured >= 50 MB/s upload and you have 100 GB free. Home upload is usually the bottleneck |
 | Hugging Face Storage Bucket server-side copy | Storage $18/TB-month above your plan's private quota | No download at all | Skipped: our pipeline reads from R2 with rclone (see 02.2) |
 
@@ -61,6 +68,14 @@ The job is bandwidth and disk, not CPU: download ~93 GB, hash it, upload ~93 GB.
 > Hetzner raised CPX/CCX prices twice in 2026 (April and June) and the US locations have much smaller traffic allowances. Check the live price for your location on the Hetzner page before you create the server, and put the number you see in `budget.md`.
 
 **Recommendation:** Hetzner CPX62 in Helsinki (`hel1`), Ubuntu 24.04. Download, verify and upload in one session, then delete the server.
+
+How the files get from Hugging Face to the box:
+
+| Method | Cost | When |
+|---|---|---|
+| **`scripts/download_fineweb.py`** (huggingface_hub with the Xet client) | $0 | Default: resumes, skips finished files, writes the folder layout the manifest step expects |
+| `hf download HuggingFaceFW/fineweb-edu --repo-type dataset --include "sample/10BT/*" --local-dir data/raw` | $0 | Same files via the CLI; they land in `data/raw/sample/10BT/`, so point `--dir` of the manifest there |
+| `hf buckets cp hf://datasets/HuggingFaceFW/fineweb-edu/sample/10BT hf://buckets/<you>/<bucket>/mygpt/raw/fineweb-edu/sample-10BT` | $0 transfer; storage on your HF plan | Only if your bucket is an HF Storage Bucket (02.2): server-side copy, no upload from the box. You still download once to build the sha256 manifest |
 
 > [!WARNING]
 > A Hetzner server bills until it is **deleted**, also when it is powered off. A forgotten CPX62 costs about $150 a month. The last step of this lesson deletes it; set a phone timer for 3 hours as a backstop.
@@ -166,6 +181,8 @@ rclone copy DATA_CARD.md r2:mygpt/
 hcloud server delete mygpt-cpu      # or console: server → Delete
 hcloud server list                  # must not list mygpt-cpu
 ```
+
+On another provider: RunPod CPU pod → console → **Terminate**; DigitalOcean → `doctl compute droplet delete mygpt-cpu` (or Destroy in the console). Powering off does not stop billing on any of them.
 
 ## How you know it worked
 

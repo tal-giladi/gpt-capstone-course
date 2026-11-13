@@ -20,7 +20,7 @@ sources:
   - title: "Lambda pricing"
     url: https://lambda.com/pricing
   - title: "Lambda: creating and managing instances (terminate to stop billing)"
-    url: https://docs.lambda.ai/public-cloud/on-demand/creating-managing-instances/
+    url: https://docs.lambda.com/public-cloud/on-demand/creating-managing-instances/
   - title: "Vast.ai billing reference"
     url: https://docs.vast.ai/guides/reference/billing
   - title: "Cloudflare R2 pricing"
@@ -29,6 +29,16 @@ sources:
     url: https://developers.cloudflare.com/billing/manage/budget-alerts/
   - title: "Hetzner Cloud regular-performance (CPX) prices"
     url: https://www.hetzner.com/cloud/regular-performance/
+  - title: "Backblaze B2 pricing"
+    url: https://www.backblaze.com/cloud-storage/pricing
+  - title: "Hetzner Object Storage pricing"
+    url: https://www.hetzner.com/storage/object-storage/
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
+  - title: "Verda (formerly DataCrunch) GPU pricing"
+    url: https://verda.com/pricing
+  - title: "Hyperbolic GPU marketplace"
+    url: https://hyperbolic.ai/marketplace
 last_verified: "2026-11-13"
 ---
 
@@ -112,6 +122,21 @@ Today's reference prices behind those lines: H100 SXM per GPU-hour on RunPod Com
 
 > [!NOTE]
 > These are prices seen on 2026-11-13, and GPU prices moved several times in 2026. Before every rental, open the provider's live page and write the price you actually pay into the ledger. If your GPU-hour price differs a lot from $4.00, recompute the GPU lines now: cost = GPU-hours × your price.
+
+### Every paid resource has a fallback
+
+The course uses one recommended provider per resource so the commands can be exact, but none of them is required. Each lesson that rents something lists the alternatives and says what changes in the commands. Prices checked 2026-11-13.
+
+| Resource | Recommended | Alternatives | Where it is decided |
+|---|---|---|---|
+| 8×H100 SXM node (baseline, main run) | RunPod Secure, $35.12/h | Lambda $31.92/h ($36.72 from 2026-11-16); Vast.ai verified hosts ~$21–24/h; Nebius ~$36/h | 04.1, 05.1, 06.4 |
+| 1×H100 (dev, benchmarks, ablations, eval, SFT/DPO) | RunPod Community, $2.69/h | Vast.ai from ~$1.87/h; Hyperbolic $3.19/h; Lambda $4.29/h; Verda $5.19/h (spot $2.60) | 04.1, 04.2, 06.1 |
+| CPU box (download, tokenize) | Hetzner CPX62, €0.1779/h | RunPod CPU pod (~$0.03–0.04 per vCPU-hour); DigitalOcean CPU-Optimized 16 vCPU $0.50/h; your own machine | 02.3, 03.1 |
+| Object storage (~180 GB, 3 months) | Cloudflare R2, ~$2.55/month | Backblaze B2 ~$1.25/month; Hetzner Object Storage €6.49/month flat; HF Storage Bucket (in PRO quota) | 02.2 |
+| Experiment tracking | W&B free tier | W&B offline mode or only the run's `log.jsonl` (no account); Trackio (free, `train.tracker=trackio`); Comet free (1 user) | 01.2 |
+| Code hosting | GitHub private repo, free | GitLab Free (private, 10 GiB); a private Hugging Face repo | 01.2, 01.3 |
+| LLM judge API (Module 10) | Anthropic or OpenAI, ~$5 prepaid | OpenRouter (OpenAI-compatible, 5.5% fee on credit purchases) | 01.2 |
+| Password manager | Any you already use | Bitwarden (free; Premium $19.80/year); 1Password ($2.99/month billed yearly); KeePassXC (free, local) | 01.2 |
 
 **The cheaper path.** If $500 is more than you want to risk, make the main run a ~124–200M improved model on 10B tokens. Main run and ablations shrink, everything else stays: about **$200–250** in total. You can still switch to it in lesson 04.3, after you have measured real throughput.
 

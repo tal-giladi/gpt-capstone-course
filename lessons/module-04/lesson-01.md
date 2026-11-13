@@ -22,13 +22,23 @@ sources:
   - title: "Lambda pricing"
     url: https://lambda.com/pricing
   - title: "Lambda: creating and managing instances"
-    url: https://docs.lambda.ai/public-cloud/on-demand/creating-managing-instances/
+    url: https://docs.lambda.com/public-cloud/on-demand/creating-managing-instances/
   - title: "Vast.ai pricing"
     url: https://vast.ai/pricing
   - title: "Nebius prices"
     url: https://nebius.com/prices
   - title: "Modal pricing"
     url: https://modal.com/pricing
+  - title: "Verda (formerly DataCrunch) GPU pricing"
+    url: https://verda.com/pricing
+  - title: "DataCrunch is changing its name to Verda"
+    url: https://verda.com/blog/datacrunch-is-changing-its-name-to-verda
+  - title: "TensorDock"
+    url: https://www.tensordock.com/
+  - title: "Paperspace pricing"
+    url: https://www.paperspace.com/pricing
+  - title: "Hyperbolic GPU marketplace"
+    url: https://hyperbolic.ai/marketplace
   - title: "NVIDIA H100 specifications"
     url: https://www.nvidia.com/en-us/data-center/h100/
 last_verified: "2026-11-13"
@@ -67,13 +77,18 @@ Per GPU-hour, on-demand unless noted.
 | **RunPod Community Cloud** | $2.69 | 8× offers appear at times ($21.52/h) | H100 PCIe $1.99, A100 SXM $1.39, RTX 4090 $0.34 | As above | Individual hosts, less redundancy; good for 1-GPU work |
 | Lambda | $4.29, **$4.89 from 2026-11-16** | $3.99, **$4.59 from 2026-11-16** ($36.72/h per node) | B200 8× $7.69, A100 80GB 8× $3.19, GH200 $2.59 (new prices) | Persistent filesystems extra | `shutdown` inside the VM does **not** stop billing; terminate in the dashboard or API |
 | Vast.ai (marketplace) | from $1.87, median $2.40 | 8× offers $2.67–3.00 per GPU | H200 median $4.61, RTX 4090 median $0.49 | Disk billed while the instance exists, also stopped; **bandwidth billed per TB by each host** (often ~$1–5/TB, sometimes far more) | Per second; interruptible ("bid") 50%+ cheaper; host quality varies, filter for verified datacenter hosts |
-| Hyperbolic | ~$3.19 (price trackers, Oct 2026) | marketplace offers | | | Supplier marketplace; prices move with supply |
+| Hyperbolic | $3.19 (marketplace page; raised from $2.89 on 2026-08-04 per trackers) | marketplace offers | | | Supplier marketplace; prices move with supply |
 | Nebius | $4.50; preemptible from $0.79 (dynamic) | HGX 8-GPU VMs at the same rate | H200 $5.40, B200 $8.50, L40S from $1.55 | Shared filesystem $0.08/GiB-mo; network egress free | Self-serve cloud; quotas for new accounts |
 | Modal | ~$3.95 ($0.001097/s) | up to 8 GPUs per container | B200 ~$6.25, H200 ~$4.54, A100 80GB ~$2.50 | | Serverless functions, $30/month free credits; awkward for a multi-hour SSH workflow |
+| Verda (formerly DataCrunch) | $5.189; spot $2.595 | not listed on the public page | A100 SXM 80GB $2.374 (spot $1.187), L40S $1.998 | | EU (Finland/Iceland) datacenters; spot halves the price |
+| TensorDock (marketplace) | from $2.25 | not advertised on the public page | A100 SXM from $1.80, RTX 4090 from $0.35 | | Prepaid; servers are **deleted** when the balance reaches $0; host-set prices |
+| Paperspace (DigitalOcean) | $5.95 on-demand ("promo") | GPU price × count | A100 80GB only listed with a 3-year commitment | | Notebook-style platform; not competitive on-demand |
 | Prime Intellect | aggregator: shows offers from many clouds | varies | varies | per underlying provider | Handy for finding 8× availability; read the underlying provider's terms |
 | CoreWeave, AWS | ~$6.16 (CoreWeave 8× node), ~$6.88 (AWS p5.48xlarge) per trackers | contract / large accounts | | | Not worth it at this scale |
 
-Vast.ai numbers are a snapshot of the public offer list on 2026-11-13; Hyperbolic, CoreWeave and AWS figures come from third-party price trackers, not the providers' pages.
+Not usable for this project: **Google Colab** (Pro $9.99/month for 100 compute units, per third-party listings) and **Kaggle** notebooks (free weekly GPU quota, T4/P100-class). Notebook sessions with time limits, no root SSH box, no H100 SXM and no 8-GPU node; fine for reading code, not for these runs.
+
+Vast.ai numbers are a snapshot of the public offer list on 2026-11-13; CoreWeave and AWS figures come from third-party price trackers, not the providers' pages.
 
 > [!NOTE]
 > GPU prices changed several times in 2026 and Lambda's rise takes effect three days after this check. Before you rent, open the provider's live page, compare with this table, and update the price lines in `budget.md`. The course still plans at **$4.00/GPU-h**; lesson 04.3 replaces that with your real numbers.
@@ -113,6 +128,8 @@ Vast.ai numbers are a snapshot of the public offer list on 2026-11-13; Hyperboli
 | `r2_secret_access_key` | R2 Secret Access Key |
 | `r2_endpoint` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
 | `hf_token` | Hugging Face read token |
+
+Other providers have no equivalent secret store that RunPod's template syntax would work with: on Vast.ai put the same variables in the template's environment field (visible to anyone with access to your account) or, better, `scp` your `r2.env` and `secrets.env` to the box and `set -a; . ~/r2.env; set +a`; on Lambda, Nebius or Verda always use the `scp` route. Never bake keys into a Docker image.
 
 In 04.2 you map them to environment variables like `RCLONE_CONFIG_R2_SECRET_ACCESS_KEY={{ RUNPOD_SECRET_r2_secret_access_key }}`.
 

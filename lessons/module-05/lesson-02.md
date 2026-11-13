@@ -19,6 +19,8 @@ sources:
     url: https://docs.runpod.io/runpodctl/reference/runpodctl-stop-pod
   - title: "RunPod pod pricing and billing"
     url: https://docs.runpod.io/pods/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
   - title: "Karpathy, llm.c discussion #481 (checkpointing and resuming the 124M run)"
     url: https://github.com/karpathy/llm.c/discussions/481
 last_verified: "2026-11-13"
@@ -40,6 +42,16 @@ You have a written, tested recovery procedure: what `mygpt.train` saves and wher
 - **Expected cost: $0.50–3** (about 1 h of 2×RTX 4090 Community at ~$0.68/h, or 2×A100 at ~$2.78/h).
 
 ## Choices and costs
+
+### The box for the drill (checked 2026-11-13)
+
+| Box | Price | Note |
+|---|---|---|
+| **RunPod Community 2×RTX 4090** (the 05.1 box) | ~$0.68/h | Recommended; the commands below use `runpodctl` only for the final terminate |
+| RunPod Community 2×A100 SXM | ~$2.78/h | If no 4090 host with a CUDA 13 driver is free |
+| Vast.ai 2×RTX 4090 | ~$1/h (median ~$0.49 per GPU) | Same drill; load `r2.env` yourself and **destroy** the instance at the end with the command from 04.2 |
+
+Any S3-compatible bucket works for drill C: `sync.sh` and the trainer only see the remote `r2`, which can be an alias for B2, Hetzner or an HF bucket (02.2).
 
 ### What a checkpoint holds
 

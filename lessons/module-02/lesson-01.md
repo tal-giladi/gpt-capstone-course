@@ -86,6 +86,16 @@ Total raw download: 28.5 GB (baseline) + 64.6 GB (main) = **~93 GB**. Tokenized 
 > [!NOTE]
 > Dataset files and sizes can change when the maintainers publish a new version (FineWeb-Edu's last data update was v1.4.0, July 2025). You pin the exact commit in lesson 02.3 so your numbers stay reproducible.
 
+### How to read a sample (all free)
+
+| Way | What it costs you | When |
+|---|---|---|
+| **`datasets` streaming** (`peek_fineweb.py` below) | A few hundred MB of network, no disk | Default: measure without downloading |
+| One parquet file: `hf download HuggingFaceFW/fineweb-edu sample/10BT/000_00000.parquet --repo-type dataset --local-dir data/peek` | 2.15 GB of disk | Slow or flaky connection where streaming keeps restarting; read it with `pyarrow` |
+| The dataset viewer on the card page | Nothing | A first look at a few rows and the `int_score` column, no numbers you can reuse |
+
+Without an HF token all three share the low anonymous rate limit; your free read token from 01.2 raises it.
+
 **Recommendation for this project:** FineWeb-Edu, `sample/10BT` (all 14 files) for the baseline, `sample/100BT` files `000_00000` to the 30th file for the main run. Don't mix in other corpora; one clean variable at a time.
 
 ## Do this

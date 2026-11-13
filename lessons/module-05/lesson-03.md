@@ -25,6 +25,12 @@ sources:
     url: https://www.runpod.io/pricing
   - title: "RunPod: manage pods (stop, terminate)"
     url: https://docs.runpod.io/pods/manage-pods
+  - title: "Lambda pricing"
+    url: https://lambda.com/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
+  - title: "Nebius prices"
+    url: https://nebius.com/prices
 last_verified: "2026-11-13"
 ---
 
@@ -78,6 +84,15 @@ The course plan budgeted $50 for this line. If your $r$ from 04.3 was much lower
 | modded-nanogpt speedrun, record #1 vs record #92 | 8×H100 | FineWeb, to val loss 3.28 | 45 min (2024-05-28) → 0.665 min (2026-08-30) | Same loss target, ~70× faster through optimizer, architecture and systems changes |
 
 Two things follow. First, your run is a solved problem: if it does not land near these numbers, something is wrong with your data or setup, not with the recipe. Second, the speedrun shows how much better a 124M model can be trained than the 2019 recipe; Module 6 tests a few of those ideas (Muon, rotary embeddings, QK-norm, untied head) on your own data.
+
+### Where to run it
+
+| 8×H100 SXM node (checked 2026-11-13) | Price/h | Predicted cost (1.3–1.5 h) | What changes in the steps |
+|---|---|---|---|
+| **RunPod Secure Cloud** | $35.12 | $46–53 | Nothing: `mygpt-8gpu` template |
+| Lambda | $31.92 ($36.72 from 2026-11-16) | $42–55 | `scp` `r2.env` and `secrets.env`, load them; Lambda terminate command in both stops (04.2); terminate in the dashboard |
+| Vast.ai verified datacenter host | ~$21–24 | $28–36 | Check the host's per-TB bandwidth price (~20 GB of shards in); load the env files; `vastai destroy instance` in both stops (04.2), destroy at the end |
+| Nebius | ~$36 | $47–54 | Env files over `scp`; delete the VM at the end |
 
 > [!NOTE]
 > Prices checked 2026-11-13 (RunPod Secure 8×H100 SXM $35.12/h; Lambda $31.92/h, rising to $36.72/h on 2026-11-16). The speedrun record changes often; numbers above are from its README on 2026-11-13. Re-check the price on the deploy page and write it into `budget.md` before you launch.
@@ -224,7 +239,7 @@ Val bpb converts the loss to bits per byte of text, $\text{bpb} = \frac{\text{lo
 ## Artifact
 
 - In the bucket: `ckpt/baseline_124m/ckpt_00019073.pt` and `ckpt/baseline_124m/log.jsonl` (plus the intermediate checkpoints).
-- In your repo: `results.md` with the summary table, the reference comparison and the W&B link; `runs/baseline_124m.out` (the console log) under `reports/`.
+- In your repo: `results.md` with the summary table, the reference comparison and the W&B link; the console log copied in step 7, moved to `reports/baseline_124m.out`.
 - `budget.md`: the measured speed and scaling efficiency (they replace 04.3's 0.9 for the main-run estimate), and the ledger line:
 
   ```text

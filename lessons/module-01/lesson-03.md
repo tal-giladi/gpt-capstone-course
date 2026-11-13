@@ -19,6 +19,8 @@ sources:
     url: https://github.com/astral-sh/uv/releases
   - title: "GitHub CLI: gh repo create"
     url: https://cli.github.com/manual/gh_repo_create
+  - title: "GitLab pricing (Free tier limits)"
+    url: https://about.gitlab.com/pricing/
   - title: "W&B quickstart (API key via WANDB_API_KEY)"
     url: https://docs.wandb.ai/quickstart/
 last_verified: "2026-11-13"
@@ -49,6 +51,7 @@ You have a private GitHub repo (called `mygpt` in this course) containing the `m
 | Python tooling | uv, pip + venv, conda | **uv** (0.13.x as of 2026-11-13). One static binary, fast installs, installs Python itself, and picks the right PyTorch wheel with `--torch-backend`. The rented boxes use the same commands (`setup_box.sh` in 04.2) |
 | PyTorch build on the laptop | CPU wheel (~200 MB) or the default CUDA wheel (several GB of `nvidia-*` packages) | **CPU** via `--torch-backend cpu`. The GPU boxes install their own CUDA 13.0 wheels later |
 | Python version | 3.11–3.13 supported by the project (uv 0.13 defaults to a newer Python) | **3.12**, the same on every box, pinned explicitly |
+| Code hosting | GitHub (free private repos), GitLab Free (private, 10 GiB), a private Hugging Face repo | **GitHub**: the commands below use `gh`. On GitLab create an empty private project in the web UI and `git remote add origin git@gitlab.com:<you>/mygpt.git && git push -u origin main`; every later `git clone https://github.com/<you>/<your-repo>.git` becomes your GitLab URL |
 | Repo visibility | Private or public | **Private** until Module 11, when you clean it up and publish it as part of your portfolio |
 
 All $0.

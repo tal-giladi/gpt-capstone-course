@@ -25,6 +25,10 @@ sources:
     url: https://www.runpod.io/pricing
   - title: "Lambda pricing"
     url: https://lambda.com/pricing
+  - title: "W&B environment variables (WANDB_MODE offline)"
+    url: https://docs.coreweave.com/guides/track/environment-variables/
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
   - title: "W&B quickstart (API key via WANDB_API_KEY)"
     url: https://docs.wandb.ai/quickstart/
 last_verified: "2026-11-13"
@@ -90,6 +94,7 @@ For data-parallel training you want **8× H100 SXM on one HGX board**: every GPU
 | Vast.ai verified datacenter hosts | ~$21–24/h | ~$2.67–3.00 | Cheapest; check per-TB bandwidth price and reliability of the exact host |
 | Nebius | ~$36/h | $4.50 | Self-serve; quotas for new accounts |
 | 2-GPU rehearsal box (RunPod Community) | 2×RTX 4090 ~$0.68/h; 2×A100 SXM ~$2.78/h | | Any 2 GPUs with a CUDA 13 driver test the launch path |
+| 2-GPU rehearsal box (Vast.ai) | 2×RTX 4090 ~$1/h at the ~$0.49 median per GPU | | Same test; filter for driver ≥ 580 and stop it with the Vast.ai command from 04.2 |
 
 **Recommended:** RunPod Secure Cloud 8×H100 SXM for the baseline (your template, secrets and stop commands already work there); Lambda or a verified Vast.ai host as fallback if no 8× pod is free when you want to run.
 
@@ -98,6 +103,15 @@ For data-parallel training you want **8× H100 SXM on one HGX board**: every GPU
 
 > [!WARNING]
 > An 8×H100 node costs **$21–37 per hour** whether it trains or sits idle, about $500–900 a day if forgotten. Never rent it to "look around": everything in this lesson is rehearsed on a 2-GPU box first.
+
+### Experiment tracking for the run
+
+| Option | Cost | What you do |
+|---|---|---|
+| **W&B free tier** (recommended) | $0 (5 GB) | `WANDB_API_KEY` in the template (step 2) and `train.wandb_project=my-gpt` |
+| W&B offline | $0, no traffic to wandb.ai during the run | `export WANDB_MODE=offline` before `torchrun`; runs stay as files in `wandb/`; copy them off the box before you terminate and upload later with `wandb sync` if you have an account |
+| No tracker | $0 | Leave `train.wandb_project` empty; `log.jsonl` (uploaded with every checkpoint) and `tools/run_summary.py` give the same numbers without live charts |
+| Trackio | $0 (local SQLite or a free HF Space) | `train.tracker=trackio` instead of W&B; same metrics, wandb-like dashboard |
 
 ## Do this
 
@@ -127,6 +141,8 @@ Expected: `8 GPUs, micro 64: accum 1, steps 19073, warmup 715` and `2 GPUs, micr
    ```
 
 3. Add the same line to `mygpt-gpu` so 1-GPU boxes log to W&B too.
+
+On Vast.ai or Lambda there is no RunPod secret: put `WANDB_API_KEY=...` in `~/.config/mygpt/secrets.env` (01.2), `scp` it to the box with `r2.env`, and load both with `set -a; . ~/secrets.env; . ~/r2.env; set +a` before `setup_box.sh`.
 
 ### 3. Check 8×H100 availability and price (5 min)
 

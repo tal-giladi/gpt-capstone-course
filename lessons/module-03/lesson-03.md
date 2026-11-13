@@ -23,6 +23,8 @@ sources:
     url: https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu
   - title: "Hetzner Cloud regular-performance (CPX) prices"
     url: https://www.hetzner.com/cloud/regular-performance/
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
 last_verified: "2026-11-13"
 ---
 
@@ -78,6 +80,12 @@ Choices you make here:
 
 The scan is single-process per shard set and numpy-bound: about 5 seconds per 20M tokens per core (ESTIMATE from a laptop core), so roughly **2 hours for the 22B-token set** and **1 hour for the 10B set**, run in parallel. Everything else takes minutes. On the CPX62 (€0.1779/h) the lesson costs about €0.50.
 
+| Box for this lesson | Price (checked 2026-11-13) | Lesson cost | Note |
+|---|---|---|---|
+| **Hetzner CPX62** (the box from 03.2) | €0.1779/h | ~€0.50 | Default; the scan is single-process per set, so 2 busy cores are enough |
+| Hetzner CPX42 (8 vCPU, 16 GB, 320 GB) | €0.0953/h | ~€0.30 | Enough RAM and disk if you start fresh (pull both shard sets, ~65 GB, and the raw files for `val_overlap.py`, ~93 GB) |
+| RunPod CPU pod or DigitalOcean CPU-Optimized (16 vCPU) | ~$0.50–0.60/h (estimate for RunPod; $0.50 on DigitalOcean) | ~$1.50–2 | Fallbacks; ≥ 200 GB disk |
+
 > [!NOTE]
 > Re-check the box price if you create a new box, and put the hours you actually used in the ledger.
 
@@ -107,9 +115,9 @@ python tools/val_overlap.py \
 ```bash
 export TOKENIZERS_PARALLELISM=false
 python scripts/tokenize_shards.py --input data/common_val --tokenizer gpt2 \
-  --out data/tok/common-val-gpt2 --val-tokens 1000000000000 --workers 15
+  --out data/tok/common-val-gpt2 --val-tokens 1000000000000 --workers $(( $(nproc) - 1 ))
 python scripts/tokenize_shards.py --input data/common_val --tokenizer tokenizers/bpe32k \
-  --out data/tok/common-val-bpe32k --val-tokens 1000000000000 --workers 15
+  --out data/tok/common-val-bpe32k --val-tokens 1000000000000 --workers $(( $(nproc) - 1 ))
 python tools/shard_check.py --shards data/tok/common-val-gpt2
 python tools/shard_check.py --shards data/tok/common-val-bpe32k
 bash scripts/sync.sh push-tok common-val-gpt2   data/tok/common-val-gpt2
@@ -207,6 +215,8 @@ rclone lsf r2:mygpt/tok/                 # gpt2-10BT/ bpe32k-100BT-30/ common-va
 hcloud server delete mygpt-cpu
 hcloud server list                       # empty
 ```
+
+On DigitalOcean: `doctl compute droplet delete mygpt-cpu`; on RunPod: Terminate the pod in the console.
 
 ## How you know it worked
 

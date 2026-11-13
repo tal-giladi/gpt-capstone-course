@@ -25,6 +25,10 @@ sources:
     url: https://www.runpod.io/pricing
   - title: "Lambda pricing"
     url: https://lambda.com/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
+  - title: "Nebius prices"
+    url: https://nebius.com/prices
 last_verified: "2026-11-13"
 ---
 
@@ -94,6 +98,7 @@ With 04.3's example $r_{\text{main}} = 175{,}000$ tokens/s and a measured $s = 0
 | RunPod Secure Cloud | $35.12 | ~$187 |
 | Lambda (from 2026-11-16) | $36.72 | ~$196 |
 | Vast.ai verified datacenter host | ~$21–24 | ~$111–127 (check bandwidth fees and host reliability) |
+| Nebius (HGX 8-GPU VM, $4.50/GPU-h) | ~$36 | ~$191 |
 
 Then compare with what is left. Example: actuals through Module 6 of $105 leave $395. Still to come besides the main run: evaluation ~$12, SFT + DPO ~$25, storage ~$7, a dev box ~$15, so ~$59. That leaves $336 for the main run and contingency.
 
@@ -166,7 +171,7 @@ Take the main-run row, add your ledger's actuals and the remaining fixed items, 
 
 ### 5. Optional: a two-point LR check at 350M (~1.7 h, ~$4.50)
 
-On a 1×H100 SXM Community box (setup as in 06.1, first 20 shards), run the frozen config for 0.5B tokens at your chosen LR and at 2× that LR:
+On a 1×H100 SXM Community box (setup as in 06.1, first 20 shards; a Vast.ai or Verda spot H100 from 06.1's table works the same), run the frozen config for 0.5B tokens at your chosen LR and at 2× that LR:
 
 ```bash
 python -m mygpt.train --config configs/main_350m.yaml train.train_tokens=500_000_000 \

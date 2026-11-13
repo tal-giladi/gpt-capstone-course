@@ -19,6 +19,12 @@ sources:
     url: https://arxiv.org/abs/2309.14322
   - title: "Keller Jordan et al., modded-nanogpt (rotary, QK-norm, untied head in the speedrun records)"
     url: https://github.com/KellerJordan/modded-nanogpt
+  - title: "RunPod GPU pricing"
+    url: https://www.runpod.io/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
+  - title: "Verda (formerly DataCrunch) GPU pricing"
+    url: https://verda.com/pricing
   - title: "Radford et al., Language Models are Unsupervised Multitask Learners (GPT-2)"
     url: https://cdn.openai.com/better-language-models/language-models.pdf
 last_verified: "2026-11-13"
@@ -72,6 +78,14 @@ Your final model has to load with `AutoModelForCausalLM` so that lm-eval, TRL, t
 ### What to expect (and what not to believe)
 
 PUBLICLY DOCUMENTED: Llama adopted pre-norm RMSNorm, SwiGLU and RoPE; Qwen3 removed the QKV bias and added QK-Norm for training stability; Wortsman et al. show QK-layernorm mostly widens the range of learning rates that train stably; the speedrun's early records credit rotary embeddings, QK-norm and an untied head. ESTIMATE for your 1B-token runs: RoPE and SwiGLU each give small gains (in the order of 0.005–0.02 bpb), RMSNorm and no-bias are about neutral in loss, QK-norm is about neutral at the control's LR (its value shows up when you raise the LR in 06.3), and the bundles are at least as good as their best single part. Effects this size are close to your threshold; that is normal, and it is why the bundles and the threshold matter more than any single row.
+
+| Box (checked 2026-11-13) | $/GPU-h | Block cost |
+|---|---|---|
+| **RunPod Community H100 SXM** | $2.69 | ~$13–15 |
+| Vast.ai verified H100 SXM | from ~$1.87, median ~$2.40 | ~$9–13 |
+| Verda H100 SXM spot | $2.595 | ~$13 (a reclaimed box loses only the unfinished run; the queue skips finished ones) |
+
+Use the same box type as your controls if you can: the comparison is at matched tokens, so speed differences do not bias it, but a host change mid-block makes slow-host problems harder to spot.
 
 > [!NOTE]
 > Run cost uses the RunPod Community H100 SXM price checked on 2026-11-13 ($2.69/h). Check the live price, and update the per-run cost in `budget.md` if it changed.

@@ -26,7 +26,7 @@ sources:
   - title: "Vast.ai billing reference"
     url: https://docs.vast.ai/guides/reference/billing
   - title: "Lambda on-demand billing"
-    url: https://docs.lambda.ai/public-cloud/on-demand/billing
+    url: https://docs.lambda.com/public-cloud/billing/
   - title: "Hetzner fraud prevention FAQ (account verification)"
     url: https://docs.hetzner.com/general/security-and-identify/fraud-prevention-faq/
   - title: "Hetzner Cloud review 2026 (new-customer server restrictions)"
@@ -35,6 +35,34 @@ sources:
     url: https://help.openai.com/en/articles/8264644-setting-up-and-managing-prepaid-api-billing
   - title: "Anthropic: how do I pay for my API usage"
     url: https://support.anthropic.com/en/articles/8977456-how-do-i-pay-for-my-api-usage
+  - title: "GitLab pricing (Free tier limits)"
+    url: https://about.gitlab.com/pricing/
+  - title: "W&B environment variables (WANDB_MODE offline / disabled)"
+    url: https://docs.coreweave.com/guides/track/environment-variables/
+  - title: "Comet pricing (MLOps free plan)"
+    url: https://www.comet.com/site/pricing/
+  - title: "Trackio (Hugging Face experiment tracking)"
+    url: https://github.com/gradio-app/trackio
+  - title: "Neptune.ai service shutdown overview"
+    url: https://support.neptune.ai/en/articles/13925165-service-shutdown-overview
+  - title: "Gemini API: OpenAI compatibility"
+    url: https://ai.google.dev/gemini-api/docs/openai
+  - title: "Groq docs: OpenAI compatibility"
+    url: https://console.groq.com/docs/openai
+  - title: "vLLM recipes: gpt-oss-120b"
+    url: https://docs.vllm.ai/projects/recipes/en/latest/OpenAI/GPT-OSS.html
+  - title: "OpenRouter FAQ (credit purchase fee, OpenAI compatibility)"
+    url: https://openrouter.ai/docs/faq
+  - title: "Bitwarden pricing"
+    url: https://bitwarden.com/pricing/
+  - title: "1Password pricing"
+    url: https://1password.com/pricing/password-manager
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
+  - title: "Backblaze B2 pricing"
+    url: https://www.backblaze.com/cloud-storage/pricing
+  - title: "Hetzner Object Storage pricing"
+    url: https://www.hetzner.com/storage/object-storage/
 last_verified: "2026-11-13"
 ---
 
@@ -70,6 +98,20 @@ You have accounts on GitHub, Hugging Face, Weights & Biases, Cloudflare, RunPod,
 | **Vast.ai** (fallback) | Cheaper 1-GPU boxes; 8×H100 fallback | Prepaid; minimum deposit $5 | A $0 balance stops instances but does not delete them; their disk keeps billing |
 | **Lambda** (fallback) | 8×H100 fallback | Billed per minute, invoiced weekly to your card | Major credit cards only; billing address required before launch; no prepaid balance and no spending cap, so termination discipline is your only guard. Sign-up credit programs are retired |
 | **LLM API**: Anthropic or OpenAI | Judge for the DPO win rate (10.2) | ~$5 prepaid | Prepaid credits. OpenAI: $5 minimum, credits expire after 1 year, the balance is not an instant cutoff. Anthropic: prepaid credits, optional auto-reload, monthly spend limits and alerts in the Console |
+
+### Alternatives for each account (checked 2026-11-13)
+
+If a signup fails, a card is declined or you simply prefer another provider, these work with the course's commands; the lesson that uses the resource says what changes.
+
+| Instead of | Alternative 1 | Alternative 2 | When you'd pick it |
+|---|---|---|---|
+| GitHub | GitLab Free: private repos, 5 users per private group, 10 GiB, 400 CI minutes/month | A private Hugging Face model repo (git over HTTPS, free inside your private quota; pushing needs a write token) | Only `git clone`/`push` is needed; use the remote URL wherever the course writes `github.com/<you>/mygpt` |
+| Weights & Biases | **No account:** `WANDB_MODE=offline` keeps runs on the box (upload later with `wandb sync`), or leave `wandb_project` empty and read `log.jsonl` with `run_summary.py` | Trackio (Hugging Face, free, wandb-like API, data local or on an HF Space): set `train.tracker=trackio`. Comet free plan (1 user, 100 GB, workspace deleted after 90 days without a UI visit; Pro $19/user-month) would need a code change | W&B signup blocked, or you want no third party. Neptune.ai is **gone**: its SaaS shut down on 2026-03-06 after the OpenAI acquisition |
+| Cloudflare R2 | Backblaze B2 (~$1.25/month here) | Hetzner Object Storage (€6.49/month flat, 1 TB + 1 TB egress) | No card accepted by Cloudflare, or you want the cheapest bill (02.2) |
+| RunPod | Vast.ai (prepaid, $5 minimum) | Lambda (credit card, per-minute billing) or Verda (EU) | Account or capacity problems (04.1) |
+| Hetzner Cloud | RunPod CPU pod (same RunPod balance) | DigitalOcean CPU-Optimized droplet, 16 vCPU / 32 GiB, $0.50/h | Hetzner verification stuck or no server capacity |
+| Anthropic / OpenAI | Google Gemini API (OpenAI-compatible endpoint; has a free tier with rate limits) | OpenRouter or Groq running the open-weights `openai/gpt-oss-120b` (OpenAI-compatible: `judge_winrate.py --judge openai --base-url ...`; OpenRouter adds a 5.5% fee, $0.80 minimum, on credit purchases). **No account at all:** self-host `gpt-oss-120b` with vLLM on your eval H100 in Module 10 | You already have credit there, want the cheapest judge, or want no API account; 10.2 has the prices and base URLs |
+| Your password manager | Bitwarden: free with unlimited passwords; Premium $19.80/year | 1Password Individual $2.99/month billed yearly; KeePassXC free and local | Pick one you will keep using after the course |
 
 > [!NOTE]
 > Signup rules and free tiers change often (Hetzner changed its new-customer policy and prices three times in 2026). If a step here does not match what you see, follow the provider's page and note the difference in `budget.md`.
@@ -131,7 +173,7 @@ Sign up at runpod.io, turn on 2FA. Do **not** add credit yet (04.1 does, with au
 ### 8. Fallback GPU providers (10 min)
 
 - **Vast.ai:** sign up, turn on 2FA, leave the balance at $0 and auto-billing **off**. In the billing settings, set a low-balance email for later.
-- **Lambda:** sign up at lambda.ai, add a major credit card and your billing address in **Settings → Billing**. If the card is declined, try another credit card in your own name; do not create a second account. Nothing is charged until you launch an instance.
+- **Lambda:** sign up at lambda.com, add a major credit card and your billing address in **Settings → Billing**. If the card is declined, try another credit card in your own name; do not create a second account. Nothing is charged until you launch an instance.
 
 ### 9. LLM API for the judge (5 min)
 

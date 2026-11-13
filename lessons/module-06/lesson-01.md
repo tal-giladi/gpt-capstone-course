@@ -21,6 +21,8 @@ sources:
     url: https://www.runpod.io/pricing
   - title: "Vast.ai pricing"
     url: https://vast.ai/pricing
+  - title: "Verda (formerly DataCrunch) GPU pricing"
+    url: https://verda.com/pricing
 last_verified: "2026-11-13"
 ---
 
@@ -97,6 +99,7 @@ $$t = \frac{10^{9}}{520{,}000} = 1{,}923\ \text{s} \approx 32\ \text{min} \;+\; 
 |---|---|---|
 | Vast.ai H100 SXM (verified host) | from ~$1.87/h, median ~$2.40 | Cheaper; host quality varies; bandwidth billed per TB |
 | RunPod Community H100 PCIe | $1.99/h | Cheaper per hour, slower per token; use only if 04.3 showed a lower $ per 1B tokens |
+| Verda H100 SXM spot | $2.595/h ($5.189 on-demand) | EU datacenters; spot can be reclaimed, like any interruptible box |
 | Interruptible / spot H100 | ~50% off | An interruption loses the unfinished run (~$1.50); the queue skips finished runs and resumes on a new box |
 
 > [!NOTE]
@@ -110,7 +113,8 @@ Copy the Module 6 lab files into `tools/`, then run the queue and the table on t
 
 ```bash
 cd ~/mygpt && . .venv/bin/activate
-CONFIG=configs/smoke_cpu.yaml RUNS=runs/queue-test MYGPT_REMOTE=r2:mygpt/tmp/queue-test \n  bash tools/run_ablations.sh tools/ablations.txt
+CONFIG=configs/smoke_cpu.yaml RUNS=runs/queue-test MYGPT_REMOTE=r2:mygpt/tmp/queue-test \
+  bash tools/run_ablations.sh tools/ablations.txt
 python tools/ablation_table.py "runs/queue-test/*" --queue tools/ablations.txt
 DRY_RUN=1 bash tools/run_ablations.sh tools/ablations.txt      # the real commands, printed only
 git add tools/ && git commit -m "Module 6 ablation tools" && git push
@@ -129,7 +133,7 @@ cd ~/mygpt && . .venv/bin/activate
 tmux new -d -s guard "bash scripts/autoshutdown.sh --idle-minutes 20 --stop-cmd 'runpodctl pod stop $RUNPOD_POD_ID' 2>&1 | tee /tmp/guard.log"
 ```
 
-The idle guard is what makes an unattended queue safe: when the last run ends, the pod stops itself 20 minutes later.
+The idle guard is what makes an unattended queue safe: when the last run ends, the pod stops itself 20 minutes later. On Vast.ai or Lambda use that provider's `--stop-cmd` from 04.2 in both lines and load `r2.env`/`secrets.env` yourself; the queue only needs the remote `r2` and, for W&B, `WANDB_API_KEY`.
 
 ### 3. Pull the first 20 shards (2 min)
 

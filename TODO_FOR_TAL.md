@@ -1,6 +1,8 @@
 # TODO for Tal
 
-- Plan approved 2026-11-13. Next: build the lessons.
+- Course complete 2026-11-13: 11 modules, 32 lessons, 229 quiz questions; Academy dry-run 0 problems. Ready to import from tal-giladi/gpt-capstone-course (public), commit at HEAD of main.
+- Web version: https://tal-giladi.github.io/gpt-capstone-course/
+- Facts the agents could not verify on the provider page are labelled in the lessons; see curriculum/audit-modules-01-06.md and audit-modules-07-11.md.
 
 ## Price sources checked 2026-11-13 (plan-level; each lesson re-verifies)
 - https://www.thundercompute.com/blog/nvidia-h100-pricing

@@ -25,6 +25,10 @@ sources:
     url: https://www.hetzner.com/cloud/regular-performance/
   - title: "Hetzner Cloud general-purpose (CCX) prices"
     url: https://www.hetzner.com/cloud/general-purpose/
+  - title: "DigitalOcean Droplet pricing (CPU-Optimized)"
+    url: https://www.digitalocean.com/pricing/droplets
+  - title: "SentencePiece"
+    url: https://github.com/google/sentencepiece
 last_verified: "2026-11-13"
 ---
 
@@ -65,6 +69,14 @@ How to read it:
 - **Hard limits.** Shards store tokens as uint16, so $V \le 65{,}536$. 32,768 = $2^{15}$ is a multiple of 64 and 128, so no padding is needed for efficient matmuls.
 - **Precedent.** Small open models use 32k–50k (Llama 2: 32,000; SmolLM2: 49,152; nanochat defaults to 32,768).
 
+### Which library trains the tokenizer
+
+| Library (all free, open source) | Can it train a 32k byte-level BPE? | Fits the project code? | Pick |
+|---|---|---|---|
+| **Hugging Face `tokenizers` 0.23** | Yes, multi-threaded, minutes on 2 GB | Yes: `tokenizer.json` is what `get_tokenizer(path)`, the shards and `export_hf.py` read | **Used** (`scripts/train_tokenizer.py`) |
+| SentencePiece (BPE mode) | Yes | No: writes a `.model` file; you would need a conversion step before `tokenize_shards.py` and the HF export | Only if you already know it well |
+| `tiktoken` | No production trainer; it encodes with existing vocabularies (used for GPT-2 here) | Encoding only | Baseline tokenizer only |
+
 ### Training sample and special tokens
 
 | Decision | Choice | Why |
@@ -83,6 +95,7 @@ One special-token rule matters already now: the string `<|endoftext|>` also appe
 | **Hetzner CPX62** (shared AMD vCPU), Helsinki | €0.1779/h excl. VAT (~$0.21/h) | 32 GB, 16 vCPU, 640 GB NVMe, 20 TB traffic | **Recommended.** Enough RAM for 500k documents, enough disk for raw data plus all shards. Same box as 02.3 |
 | Hetzner CCX43 / CCX53 (dedicated vCPU) | €0.3766 / €0.7267 per hour | 64 GB / 16 cores, 128 GB / 32 cores | Faster tokenizing in 03.2 at about the same total cost; showed "currently unavailable" on 2026-11-13 |
 | RunPod CPU pod | roughly $0.03–0.04 per vCPU-hour (late-2026 estimate; the console shows the live price) | choose ≥ 32 GB RAM and ≥ 250 GB container disk | Fallback if Hetzner will not create servers for you |
+| DigitalOcean CPU-Optimized, 16 vCPU / 32 GiB or 32 vCPU / 64 GiB | $0.50/h or $1.00/h | 200 GiB / 400 GiB SSD | Fallback with quick signup. Take the 32-vCPU size if you will tokenize on it in 03.2 (raw data + shards need ~160 GB); destroy, don't power off |
 | Your laptop | $0 | needs ≥ 16 GB free RAM | Possible for this lesson only; 03.2 needs the box anyway |
 
 > [!NOTE]
@@ -100,6 +113,8 @@ hcloud server create --name mygpt-cpu --type cpx62 --image ubuntu-24.04 --locati
 scp ~/.config/mygpt/r2.env root@<IP>:/root/r2.env
 ssh root@<IP>
 ```
+
+Not on Hetzner? Create a RunPod CPU pod (≥ 32 GB RAM, ≥ 250 GB container disk, SSH over exposed TCP) or a DigitalOcean CPU-Optimized droplet (Ubuntu 24.04, your SSH key) in the console, then copy `r2.env` and log in with the SSH command the provider shows (RunPod adds `-p <PORT>`; use `scp -P <PORT>`), and continue below.
 
 On the box (same setup as 02.3):
 

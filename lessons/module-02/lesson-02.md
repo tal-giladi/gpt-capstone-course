@@ -25,8 +25,18 @@ sources:
     url: https://huggingface.co/storage
   - title: "RunPod pod pricing (storage)"
     url: https://docs.runpod.io/pods/pricing
-  - title: "rclone S3 backend (Cloudflare R2 section)"
+  - title: "rclone S3 backend (provider list: Cloudflare, Hetzner, Wasabi, GCS, AWS, Other)"
     url: https://rclone.org/s3/
+  - title: "rclone alias backend"
+    url: https://rclone.org/alias/
+  - title: "Hetzner Object Storage pricing"
+    url: https://www.hetzner.com/storage/object-storage/
+  - title: "Wasabi pricing"
+    url: https://wasabi.com/pricing
+  - title: "Google Cloud Storage pricing"
+    url: https://cloud.google.com/storage/pricing
+  - title: "Hugging Face Storage Buckets: S3-compatible API"
+    url: https://huggingface.co/docs/hub/storage-buckets-s3
 last_verified: "2026-11-13"
 ---
 
@@ -60,16 +70,26 @@ You have a private Cloudflare R2 bucket named `mygpt`, an API token scoped to th
 | **Cloudflare R2** (Standard) | $0.015/GB-month, first 10 GB free | **Free** | ~$2.55 | S3 API, works with rclone/boto3. Class A ops $4.50/M, Class B $0.36/M (irrelevant at our file counts) |
 | Backblaze B2 | $6.95/TB-month (~$0.007/GB), first 10 GB free | Free up to 3× your stored data per month, then $0.01/GB | ~$1.25 | S3 API. Cheapest storage; the 3× cap (~540 GB/month here) is enough but not unlimited |
 | AWS S3 Standard (us-east-1) | ~$0.023/GB-month | ~$0.09/GB after the first 100 GB/month | ~$4 storage + ~$26 egress | Only sensible if your GPUs are also in AWS, same region |
-| Hugging Face Storage Bucket / private dataset repo | Free accounts: 100 GB private total. PRO ($9/month): 1 TB private included, then $18/TB-month | Included up to 8× stored | $9 (PRO) | Storage Buckets are S3-like, non-versioned and have an S3-compatible API; can copy FineWeb-Edu server-side without downloading. Not used here because our scripts are tested with rclone on R2 |
+| Hugging Face Storage Bucket / private dataset repo | Free accounts: 100 GB private total. PRO ($9/month): 1 TB private included, then $18/TB-month | Included up to 8× stored | $9 (PRO) | Storage Buckets are S3-like, non-versioned, with an S3-compatible API at `https://<namespace>.s3.hf.co` that rclone can use; can copy FineWeb-Edu server-side without downloading. Not the default because the course's commands are tested with rclone on R2 |
 | RunPod network volume | $0.07/GB-month (<1 TB) | Free inside RunPod | ~$12.60 | Lives in one RunPod data centre; only pods there can mount it. A cache next to the GPUs, not your source of truth |
 | Nebius object storage | $0.0147/GiB-month | $0.015/GiB (Standard tier) | ~$2.70 + ~$6 | Only interesting if you train on Nebius |
+| Hetzner Object Storage (hel1, fsn1, nbg1) | €6.49/month base includes 1 TB storage + 1 TB egress; then €0.0087/TB-hour | €1/TB beyond the included 1 TB; free inside Hetzner's eu-central zone | ~€6.49 | S3 API (rclone provider `Hetzner`). Flat price; attractive if your CPU boxes are Hetzner, since traffic to them is free |
+| Wasabi (pay as you go) | $7.99/TB-month, **1 TB minimum**, 90-day minimum storage duration | No egress or API fees | ~$8 | S3 API. Pays for 1 TB even when you store 180 GB; deleted data is billed until 90 days |
+| Google Cloud Storage Standard (us-central1) | $0.020/GB-month | ~$0.12/GB to the internet (tiered) | ~$3.60 storage + ~$45 egress | Like S3: only sensible with GPUs in the same Google Cloud region |
 
 > [!NOTE]
 > Prices drift. Before you create the bucket, open the R2 and B2 pricing pages linked in the sources, check the numbers, and update the storage line in your `budget.md`.
 
 ### Recommendation: Cloudflare R2
 
-Use **R2** for this project. Egress is free no matter where the GPUs are, which matters because you will move between RunPod, Lambda or Vast.ai depending on price and availability in Module 4. The storage premium over B2 is about $1.30 a month, which is less than ten minutes of a single idle H100. B2 is a fine fallback (the same rclone commands work with a `b2` or S3-type remote) if you cannot get R2.
+Use **R2** for this project. Egress is free no matter where the GPUs are, which matters because you will move between RunPod, Lambda or Vast.ai depending on price and availability in Module 4. The storage premium over B2 is about $1.30 a month, which is less than ten minutes of a single idle H100. B2 is the cheapest fallback and Hetzner Object Storage the simplest flat-price one; both work with the same commands through the remote setup in step 4.
+
+| If R2 is not possible | Pick | Why |
+|---|---|---|
+| You want the lowest bill | **Backblaze B2** | ~$1.25/month; the 3× free egress (~540 GB/month here) covers the planned pulls |
+| Your CPU boxes are on Hetzner and you like a fixed bill | **Hetzner Object Storage** | €6.49/month flat; uploads from Hetzner boxes in the same zone cost nothing |
+| You already have Hugging Face PRO | **HF Storage Bucket** | Inside your PRO quota; S3 API at `https://<namespace>.s3.hf.co` (rclone works, see step 4) |
+| Avoid for this project | AWS S3, GCS, Wasabi | Egress fees (S3, GCS) or a 1 TB / 90-day minimum (Wasabi) |
 
 > [!CAUTION]
 > An R2 API secret can read, overwrite and delete everything it is scoped to. Scope it to the one bucket, store it in your password manager and in a `chmod 600` file outside any git repo, and never paste it into a notebook, a Docker image, a W&B config or a chat. If it leaks, delete the token in the Cloudflare dashboard immediately and create a new one.
@@ -117,6 +137,35 @@ The file sets `RCLONE_CONFIG_R2_TYPE=s3`, `..._PROVIDER=Cloudflare`, the keys, `
 
 > [!TIP]
 > On Windows use WSL or Git Bash for these commands, or set the same variables with `$env:RCLONE_CONFIG_R2_TYPE="s3"` and so on in PowerShell.
+
+#### Using another provider
+
+Keep the remote **name** `r2` even if the bucket is not on Cloudflare: then `r2:mygpt/...` in every later lesson, in `MYGPT_REMOTE` and in the configs' `ckpt_remote` works unchanged. Define your real provider as a second remote `store` and make `r2` an alias for your bucket; `r2:mygpt/raw/...` is then stored as `<your-bucket>/mygpt/raw/...`. The commented blocks at the end of `r2.env.example` hold the exact lines.
+
+| Provider | `RCLONE_CONFIG_STORE_PROVIDER` | Endpoint | Key to create |
+|---|---|---|---|
+| Backblaze B2 | `Other` | `https://s3.<region>.backblazeb2.com` (shown on the bucket page) | Application key restricted to the bucket |
+| Hetzner Object Storage | `Hetzner` | `https://hel1.your-objectstorage.com` (or `fsn1`, `nbg1`) | S3 credentials in the Cloud console (project → Security) |
+| Wasabi | `Wasabi` | `https://s3.<region>.wasabisys.com` | Access key for a user limited to the bucket |
+| AWS S3 | `AWS` (plus `REGION`, no endpoint) | | IAM user with a policy for this bucket only |
+| Google Cloud Storage | `GCS` | `https://storage.googleapis.com` | HMAC key (Cloud Storage → Settings → Interoperability) |
+| HF Storage Bucket | `Other` (+ `FORCE_PATH_STYLE=true`, `LIST_VERSION=2`, `REGION=us-east-1`) | `https://<namespace>.s3.hf.co` | Fine-grained HF token with write access to the bucket → **Generate S3 credentials** |
+
+```bash
+# example: Backblaze B2 bucket "mygpt-yourname-2026"
+RCLONE_CONFIG_R2_TYPE=alias
+RCLONE_CONFIG_R2_REMOTE=store:mygpt-yourname-2026
+RCLONE_CONFIG_STORE_TYPE=s3
+RCLONE_CONFIG_STORE_PROVIDER=Other
+RCLONE_CONFIG_STORE_ENDPOINT=https://s3.us-west-004.backblazeb2.com
+RCLONE_CONFIG_STORE_REGION=us-west-004
+RCLONE_CONFIG_STORE_ACCESS_KEY_ID=...
+RCLONE_CONFIG_STORE_SECRET_ACCESS_KEY=...
+RCLONE_CONFIG_STORE_NO_CHECK_BUCKET=true
+MYGPT_REMOTE=r2:mygpt
+```
+
+On B2, S3, GCS and Wasabi bucket names are global, so `mygpt` is almost certainly taken: create a unique one. Everything else in this lesson (round trip, speed test, layout, the `copy`-not-`sync` rule) is identical. In 04.2 you put the same `RCLONE_CONFIG_*` lines into the RunPod template instead of the R2 ones.
 
 ### 5. Prove the round trip
 

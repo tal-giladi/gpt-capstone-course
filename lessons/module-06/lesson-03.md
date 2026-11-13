@@ -20,6 +20,12 @@ sources:
     url: https://arxiv.org/abs/2509.02046v1
   - title: "Keller Jordan et al., modded-nanogpt (Muon in the speedrun records)"
     url: https://github.com/KellerJordan/modded-nanogpt
+  - title: "RunPod GPU pricing"
+    url: https://www.runpod.io/pricing
+  - title: "Vast.ai pricing"
+    url: https://vast.ai/pricing
+  - title: "Verda (formerly DataCrunch) GPU pricing"
+    url: https://verda.com/pricing
   - title: "Hu et al., MiniCPM: warmup-stable-decay (WSD) scheduler (arXiv 2404.06395)"
     url: https://arxiv.org/abs/2404.06395
   - title: "Hägele et al., Scaling Laws and Compute-Optimal Training Beyond Fixed Training Durations (arXiv 2405.18392)"
@@ -73,6 +79,14 @@ All on top of your architecture (the `@ARCH` macro in `ablations.txt`; edit it i
 | `abl_arch_muon_wsd` | Muon 0.02 + WSD | The likely main-run combination, measured as a whole |
 
 Muon adds a few percent of time per step (Newton–Schulz on each matrix); 7 runs ≈ 4.4 GPU-h ≈ $12 at $2.69/h.
+
+| Box (checked 2026-11-13) | $/GPU-h | Block cost |
+|---|---|---|
+| **RunPod Community H100 SXM** | $2.69 | ~$11–13 |
+| Vast.ai verified H100 SXM | from ~$1.87, median ~$2.40 | ~$8–11 |
+| Verda H100 SXM spot | $2.595 | ~$12 (a reclaimed box loses only the unfinished run; the queue skips finished ones) |
+
+Use the same box type as your controls if you can: the comparison is at matched tokens, so speed differences do not bias it, but a host change mid-block makes slow-host problems harder to spot.
 
 > [!NOTE]
 > Price checked 2026-11-13 (RunPod Community H100 SXM $2.69/h). Muon and WSD are active research areas; check the modded-nanogpt README and recent optimizer benchmarks for anything that changes the picture before you decide.
