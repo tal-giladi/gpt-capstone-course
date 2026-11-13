@@ -1,6 +1,6 @@
 # TODO for Tal
 
-- Review `curriculum/course-plan.md` and answer the 3 open decisions in section 6.
+- Plan approved 2026-11-13. Next: build the lessons.
 
 ## Price sources checked 2026-11-13 (plan-level; each lesson re-verifies)
 - https://www.thundercompute.com/blog/nvidia-h100-pricing

@@ -1,6 +1,6 @@
 # Course plan — Train Your Own GPT: the real-world capstone
 
-Status: PLAN FOR REVIEW (2026-11-13). Nothing below is written as lessons yet.
+Status: PLAN APPROVED (2026-11-13). All open decisions resolved; lessons not written yet.
 
 ## 1. What this course is
 
@@ -79,4 +79,4 @@ scratch versions you already wrote).
 
 1. ~~Main run size~~ DECIDED 2026-11-13: ~350M on ~20B tokens, ~$500 cap.
 2. ~~Tokenizer~~ DECIDED 2026-11-13: train our own BPE on FineWeb-Edu for the main model; GPT-2's tokenizer only for the 124M baseline; compare loss in bits-per-byte.
-3. Course name/slug: `gpt-capstone-course` OK?
+3. ~~Course name/slug~~ DECIDED 2026-11-13: keep `gpt-capstone-course`.
