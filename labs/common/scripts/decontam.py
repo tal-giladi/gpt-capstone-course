@@ -7,8 +7,13 @@
   python scripts/decontam.py --shards-or-parquet data/raw/fineweb_edu_100BT --tokenizer tokenizers/own32k \
       --max-docs 5000000 --drop data/decontam_drop.json
 
-Benchmarks are downloaded with `datasets` (HellaSwag val, ARC test, PIQA val: the splits
-lm-eval scores). --benchmark-file FILE.jsonl ({"benchmark": ..., "text": ...} per line) adds
+  # the two Module 8 adds (WinoGrande, LAMBADA):
+  python scripts/decontam.py --shards-or-parquet data/tok/bpe32k-100BT-30 --tokenizer data/tok/bpe32k-100BT-30       --benchmarks winogrande,lambada_openai --out reports/decontam-wg-lambada-bpe32k.json
+
+Benchmarks are downloaded with `datasets` (the splits lm-eval 0.4.13 scores): HellaSwag val,
+ARC test, PIQA val, WinoGrande winogrande_xl val (sentence with the blank filled by the correct
+option), LAMBADA (lambada_openai test, full passage including the target word; `lambada` is an
+alias). --benchmark-file FILE.jsonl ({"benchmark": ..., "text": ...} per line) adds
 or replaces them offline. Report: per benchmark, how many items share >=1 13-gram with the
 training data, plus the flagged training documents.
 """
@@ -40,6 +45,9 @@ def ngram_hashes(tokens: np.ndarray, n: int) -> np.ndarray:
     return h
 
 
+BENCHMARKS = ("hellaswag", "arc_easy", "arc_challenge", "piqa", "winogrande", "lambada_openai")
+
+
 def load_benchmarks(names: list[str]) -> dict[str, list[str]]:
     from datasets import load_dataset
     out = {}
@@ -55,8 +63,16 @@ def load_benchmarks(names: list[str]) -> dict[str, list[str]]:
         elif name == "piqa":
             ds = load_dataset("baber/piqa", split="validation")  # the copy lm-eval uses
             out[name] = [r["goal"] + " " + (r["sol1"] if int(r["label"]) == 0 else r["sol2"]) for r in ds]
+        elif name == "winogrande":
+            ds = load_dataset("allenai/winogrande", "winogrande_xl", split="validation")
+            out[name] = [r["sentence"].replace("_", r["option1"] if str(r["answer"]) == "1" else r["option2"], 1)
+                         for r in ds]
+        elif name in ("lambada_openai", "lambada"):
+            ds = load_dataset("EleutherAI/lambada_openai", "default", split="test")
+            out["lambada_openai"] = [r["text"] for r in ds]
         else:
-            raise ValueError(f"unknown benchmark {name!r}; use --benchmark-file for custom sets")
+            raise ValueError(f"unknown benchmark {name!r} (known: {', '.join(BENCHMARKS)}); "
+                             "use --benchmark-file for custom sets")
     return out
 
 
@@ -64,7 +80,8 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--shards-or-parquet", required=True, help="shards dir (train_*.bin) or parquet file/dir")
     p.add_argument("--tokenizer", required=True, help="gpt2 | DIR (must match the shards)")
-    p.add_argument("--benchmarks", default="hellaswag,arc_easy,arc_challenge,piqa")
+    p.add_argument("--benchmarks", default="hellaswag,arc_easy,arc_challenge,piqa",
+                   help=f"comma list from {','.join(BENCHMARKS)} (lambada = lambada_openai)")
     p.add_argument("--benchmark-file", default=None, help="JSONL with benchmark/text fields (offline)")
     p.add_argument("--n", type=int, default=13)
     p.add_argument("--split", default="train", help="shards split to scan")

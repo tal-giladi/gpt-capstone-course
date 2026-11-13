@@ -3,7 +3,7 @@
 <Your Name> · <date> · Code: <GitHub repo URL> (tag `v1.0`) · Model: <HF URL> · Demo: <Space URL>
 
 <!-- Technical report template (lesson 11.3). Every number must come from a file in your repo:
-     cite it in brackets, e.g. [reports/eval_report.md]. Label every ESTIMATE as such. -->
+     cite it in brackets, e.g. [EVAL_REPORT.md]. Label every ESTIMATE as such. -->
 
 ## Abstract
 
@@ -52,7 +52,7 @@ reports/main-run-log.md and log.jsonl.>
 
 ## 6. Evaluation
 
-<Main table copied from reports/eval_report.md: OpenAI GPT-2 124M and 355M, your baseline, your
+<Main table copied from EVAL_REPORT.md: OpenAI GPT-2 124M and 355M, your baseline, your
 base model; bpb on the common val set; contamination note. State which differences exceed 2
 standard errors.>
 
@@ -97,7 +97,7 @@ Energy and CO2 (ESTIMATE): <GPU-hours x 0.7 kW x 1.2 PUE x grid intensity>.
 | Tokenizer | `tokenizers/bpe32k/tokenizer.json` (sha256 `<...>`) | |
 | SFT / DPO data | revisions `<sha>`, `<sha>` | |
 | Checkpoints | HF `<you>/my-gpt-350m-base`, `<you>/my-gpt-350m` tag `v1.0` | commit `<sha>` |
-| Evaluation | lm-eval 0.4.13, commands in `reports/eval_report.md` | |
+| Evaluation | lm-eval 0.4.13, commands in `EVAL_REPORT.md` | |
 
 Commands to reproduce the main run, the evaluation and the post-training, in order:
 

@@ -11,9 +11,9 @@ Windows: contiguous, non-overlapping blocks of --seq-len tokens from the start o
 mygpt.data.DistributedTokenLoader, as in mygpt.evaluate. bpb = loss / ln 2 * tokens / bytes, with
 tokens and bytes of the whole split from meta.json, as in mygpt.evaluate.
 
---eval-tokens all evaluates every full window of the split and prints the token count to pass to
-`mygpt.evaluate --eval-tokens` so a native checkpoint covers the very same windows (the count is a
-multiple of 64 x seq_len, so micro-batches 64, 32 and 16 all stop at the same place).
+--eval-tokens all evaluates every full window of the split (a multiple of 64 x seq_len, so batches
+64, 32 and 16 all stop at the same place); `mygpt.evaluate --eval-tokens all` covers the same windows
+natively. The JSON also keeps `mygpt_evaluate_eval_tokens`, the same count as an explicit number.
 
 The shards must have been made with the model's tokenizer: the script encodes a probe sentence with
 both and refuses to run if they differ (a mismatched tokenizer gives a meaningless bpb).

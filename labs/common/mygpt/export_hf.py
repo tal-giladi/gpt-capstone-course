@@ -1,6 +1,12 @@
 """Export a mygpt checkpoint to Hugging Face format.
 
   python -m mygpt.export_hf --ckpt runs/main/ckpt_00038000.pt --out hf/my-gpt-350m [--tokenizer DIR]
+      [--push you/my-gpt-350m [--private | --no-private]]
+
+--push creates the Hub repo PRIVATE by default (--no-private for public) and uploads the folder.
+create_repo never changes the visibility of a repo that already exists; the script prints the
+repo's actual visibility. Make it public at release time (Module 11):
+  hf repos settings you/my-gpt-350m --public
 
 Export rule (anything else is refused as an "ablation-only combination"):
   learned + layernorm + gelu + bias + no qk_norm  -> GPT2LMHeadModel
@@ -162,6 +168,24 @@ def export(model, m: ModelConfig, out_dir: str, tokenizer: str | None, dtype: st
     return info
 
 
+def push_to_hub(folder: str, repo_id: str, private: bool = True, api=None) -> dict:
+    """Create `repo_id` (private by default; an existing repo keeps its visibility) and upload `folder`."""
+    if api is None:
+        from huggingface_hub import HfApi
+        api = HfApi()
+    api.create_repo(repo_id, repo_type="model", private=private, exist_ok=True)
+    api.upload_folder(folder_path=folder, repo_id=repo_id, repo_type="model")
+    is_private = getattr(api.repo_info(repo_id, repo_type="model"), "private", None)
+    print(f"[export] uploaded to https://huggingface.co/{repo_id} "
+          f"({'private' if is_private else 'PUBLIC' if is_private is False else 'visibility unknown'})")
+    if is_private and private:
+        print(f"[export] to make it public (Module 11): hf repos settings {repo_id} --public")
+    elif is_private is False and private:
+        print(f"[export] WARNING: {repo_id} already existed as a public repo; --private does not change it. "
+              f"Make it private with: hf repos settings {repo_id} --private")
+    return {"repo_id": repo_id, "private": is_private}
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description="Export a mygpt checkpoint to Hugging Face format.")
     p.add_argument("--ckpt", required=True, help="checkpoint file, or a run dir (uses the latest ckpt)")
@@ -169,6 +193,9 @@ def main(argv=None):
     p.add_argument("--tokenizer", default=None, help="gpt2 | DIR (default: tokenizer recorded in the shards' meta.json)")
     p.add_argument("--dtype", choices=["fp32", "bf16"], default="fp32", help="dtype of the saved weights")
     p.add_argument("--push", default=None, help="optional HF repo id to upload to, e.g. you/my-gpt-350m")
+    p.add_argument("--private", action=argparse.BooleanOptionalAction, default=True,
+                   help="create the --push repo private (default) or public (--no-private); "
+                        "an existing repo keeps its visibility")
     args = p.parse_args(argv)
 
     from .checkpoint import latest_checkpoint, load_checkpoint
@@ -198,10 +225,7 @@ def main(argv=None):
                   extra={"source_checkpoint": path, "step": ck["step"], "tokens": ck["step"] * cfg.train.total_batch_tokens})
     print(json.dumps(info, indent=2, default=str))
     if args.push:
-        from huggingface_hub import HfApi
-        HfApi().create_repo(args.push, repo_type="model", exist_ok=True)
-        HfApi().upload_folder(folder_path=args.out, repo_id=args.push, repo_type="model")
-        print(f"[export] uploaded to https://huggingface.co/{args.push}")
+        info["hub"] = push_to_hub(args.out, args.push, private=args.private)
     return info
 
 

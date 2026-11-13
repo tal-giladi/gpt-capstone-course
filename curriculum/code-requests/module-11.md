@@ -4,6 +4,8 @@
    creates a public repo for a personal account. Lessons 07.3 and 11.1 warn about it and create repos with
    `hf repos create --private` first, but a `--private` flag (default on) would remove the trap:
    `create_repo(args.push, repo_type="model", private=args.private, exist_ok=True)`.
+   DONE 2026-11-13 by main maintainer: Done with Module 7 item 1: `--private` default on, `--no-private` for public; lesson 11.1's warning updated and `hf repos settings ... --public` used. Module 11 templates now cite `EVAL_REPORT.md` (what 08.3 writes) instead of `reports/eval_report.md`.
 2. **Nice to have — `[demo]` extra.** Lesson 11.2's Space pins `torch==2.13.0` (newest on ZeroGPU's supported list
    on 2026-11-13) while the project uses torch 2.15; nothing to change in `pyproject.toml`, just noting that the
    Space's `requirements.txt` in `labs/module-11/space/` is deliberately separate from the project pins.
+   DONE 2026-11-13 by main maintainer: No change needed; the Space's `requirements.txt` stays separate from the project pins.

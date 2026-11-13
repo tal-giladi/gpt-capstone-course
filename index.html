@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Train Your Own GPT — the real-world capstone</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <meta name="description" content="Rent real GPUs, use real data, and train, align, evaluate and publish your own GPT-2-class model for under $500.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/themes/vue.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <style>
+    :root { --theme-color: #2f5fa7; }
+    .sidebar { padding-top: 20px; }
+    .markdown-section table { display: table; width: 100%; }
+    .markdown-section blockquote.alert { border-left: 4px solid #888; background: #f6f8fa; padding: 8px 14px; }
+    .markdown-section blockquote.alert p:first-child strong { text-transform: uppercase; font-size: .85em; letter-spacing: .04em; }
+    .markdown-section blockquote.alert-note { border-color: #2f81f7; }
+    .markdown-section blockquote.alert-tip { border-color: #2da44e; }
+    .markdown-section blockquote.alert-important { border-color: #8250df; }
+    .markdown-section blockquote.alert-warning { border-color: #bf8700; background: #fff8e5; }
+    .markdown-section blockquote.alert-caution { border-color: #cf222e; background: #ffebe9; }
+    .quiz { margin-top: 2.5em; border-top: 2px solid var(--theme-color); padding-top: 1em; }
+    .quiz .q { margin: 1.2em 0; }
+    .quiz label { display: block; padding: 6px 10px; margin: 4px 0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; }
+    .quiz label.right { background: #dafbe1; border-color: #2da44e; }
+    .quiz label.wrong { background: #ffebe9; border-color: #cf222e; }
+    .quiz .expl { display: none; margin: 6px 0 0; color: #444; }
+    .quiz .q.done .expl { display: block; }
+    .quiz button { background: var(--theme-color); color: #fff; border: 0; border-radius: 6px; padding: 8px 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    var REPO = 'https://github.com/tal-giladi/gpt-capstone-course';
+
+    // GitHub alerts (> [!NOTE]) -> styled blockquotes.
+    function alertsPlugin(hook) {
+      hook.afterEach(function (html) {
+        return html.replace(/<blockquote>\s*<p>\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/g, function (_, k) {
+          return '<blockquote class="alert alert-' + k.toLowerCase() + '"><p><strong>' + k.toLowerCase() + '</strong><br>';
+        });
+      });
+    }
+
+    // Lessons link relative to their own file (../module-04/lesson-02.md); the sidebar links are
+    // repo-relative. Resolve page links against the page's folder so both work from the root.
+    function relativeLinksPlugin(hook, vm) {
+      hook.beforeEach(function (md) {
+        var file = vm.route.file || '';
+        var dir = file.indexOf('/') >= 0 ? file.replace(/[^/]*$/, '') : '';
+        if (!dir || /_sidebar\.md$/.test(file)) return md;
+        return md.replace(/(!?\[[^\]]*\]\()([^)\s]+)/g, function (all, pre, url) {
+          if (/^(https?:|mailto:|#|\/)/.test(url)) return all;
+          var parts = (dir + url).split('/'), out = [];
+          parts.forEach(function (p) {
+            if (p === '..') out.pop(); else if (p !== '.') out.push(p);
+          });
+          return pre + '/' + out.join('/');
+        });
+      });
+    }
+
+    // Lab files and folders are not pages: send those links to GitHub.
+    function labLinksPlugin(hook, vm) {
+      hook.doneEach(function () {
+        document.querySelectorAll('.markdown-section a[href]').forEach(function (a) {
+          var href = a.getAttribute('href');
+          if (/^https?:/.test(href) || href.indexOf('#/') === 0 && !/labs\/|templates\//.test(href)) return;
+          var m = href.match(/(labs|templates)\/[^?#]*/);
+          if (!m) return;
+          var path = m[0];
+          var kind = /\.[a-z0-9]+$/i.test(path) && !/\/$/.test(path) ? 'blob' : 'tree';
+          a.setAttribute('href', REPO + '/' + kind + '/main/' + path.replace(/\/$/, ''));
+          a.setAttribute('target', '_blank');
+        });
+      });
+    }
+
+    // Render the lesson's / module's .quiz.yaml as a self-graded quiz under the page.
+    function quizPlugin(hook, vm) {
+      hook.doneEach(function () {
+        var file = vm.route.file || '';
+        if (!/^(lessons\/module-\d\d\/lesson-\d\d|assessments\/module-\d\d-quiz)\.md$/.test(file)) return;
+        fetch(file.replace(/\.md$/, '.quiz.yaml')).then(function (r) { return r.ok ? r.text() : null; }).then(function (txt) {
+          if (!txt || !window.jsyaml) return;
+          var qs = jsyaml.load(txt) || [];
+          var box = document.createElement('div');
+          box.className = 'quiz';
+          box.innerHTML = '<h2>Quiz</h2>';
+          qs.forEach(function (q, i) {
+            var d = document.createElement('div');
+            d.className = 'q';
+            var h = '<p><strong>' + (i + 1) + '.</strong> ' + escapeHtml(q.question) + '</p>';
+            q.options.forEach(function (o, j) {
+              h += '<label><input type="radio" name="q' + i + '" value="' + j + '"> ' + escapeHtml(o) + '</label>';
+            });
+            h += '<p class="expl">' + escapeHtml(q.explanation || '') + '</p>';
+            d.innerHTML = h;
+            d.dataset.correct = q.correct;
+            box.appendChild(d);
+          });
+          var btn = document.createElement('button');
+          btn.textContent = 'Check answers';
+          var score = document.createElement('p');
+          btn.onclick = function () {
+            var ok = 0;
+            box.querySelectorAll('.q').forEach(function (d) {
+              var c = +d.dataset.correct;
+              d.classList.add('done');
+              d.querySelectorAll('label').forEach(function (l, j) {
+                l.classList.remove('right', 'wrong');
+                var picked = l.querySelector('input').checked;
+                if (j === c) l.classList.add('right');
+                else if (picked) l.classList.add('wrong');
+                if (picked && j === c) ok++;
+              });
+            });
+            score.textContent = 'Score: ' + ok + ' / ' + qs.length + (ok / qs.length >= 0.7 ? ' — pass' : ' — pass mark is 70%');
+          };
+          box.appendChild(btn);
+          box.appendChild(score);
+          document.querySelector('.markdown-section').appendChild(box);
+          if (window.renderMathInElement) renderMath(box);
+        });
+      });
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/`([^`]+)`/g, '<code>$1</code>');
+    }
+
+    function renderMath(el) {
+      renderMathInElement(el, {
+        delimiters: [{ left: '$$', right: '$$', display: true }, { left: '$', right: '$', display: false }],
+        ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'],
+        throwOnError: false
+      });
+    }
+
+    function mathPlugin(hook) {
+      hook.doneEach(function () {
+        var el = document.querySelector('.markdown-section');
+        if (el && window.renderMathInElement) renderMath(el);
+      });
+    }
+
+    function mermaidPlugin(hook) {
+      hook.afterEach(function (html) {
+        return html.replace(/<pre[^>]*data-lang="mermaid"[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/g, function (_, code) {
+          var t = document.createElement('textarea');
+          t.innerHTML = code;
+          return '<div class="mermaid">' + t.value.replace(/</g, '&lt;') + '</div>';
+        });
+      });
+      hook.doneEach(function () {
+        if (window.mermaid) mermaid.run({ querySelector: '.markdown-section .mermaid' });
+      });
+    }
+
+    window.$docsify = {
+      name: 'Train Your Own GPT',
+      repo: REPO,
+      loadSidebar: true,
+      subMaxLevel: 0,
+      auto2top: true,
+      maxLevel: 4,
+      alias: { '/.*/_sidebar.md': '/_sidebar.md' },
+      search: { placeholder: 'Search the course...', noData: 'No results.', depth: 3 },
+      copyCode: { buttonText: 'Copy', errorText: 'Error', successText: 'Copied' },
+      plugins: [relativeLinksPlugin, alertsPlugin,mermaidPlugin, mathPlugin, labLinksPlugin, quizPlugin]
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/docsify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/plugins/front-matter.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2.1.1/dist/docsify-copy-code.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <script>if (window.mermaid) mermaid.initialize({ startOnLoad: false });</script>
+</body>
+</html>

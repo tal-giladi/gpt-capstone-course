@@ -70,7 +70,7 @@ The export class is fixed by your recipe (06.4's export rule): RoPE + RMSNorm + 
 | Public Hub repo now | $0 | Not yet: Module 8 has not measured it and Module 11 writes the model card first |
 
 > [!WARNING]
-> `python -m mygpt.export_hf ... --push you/repo` creates the repo with the Hub's default visibility (public for a personal account). For a private copy, create the repo first with `hf repos create ... --private`, then upload into it.
+> `python -m mygpt.export_hf ... --push you/repo` creates the repo **private** by default (`--no-private` would make it public) and prints its visibility. A repo that already exists keeps its visibility, so if the printed line says `PUBLIC`, make it private with `hf repos settings you/repo --private`. Plain `hf upload` to a repo that does not exist yet still creates it public on a personal account.
 
 > [!CAUTION]
 > Terminating the node deletes its disk, and `rclone delete` in the bucket cannot be undone. Terminate only after the final checkpoint, `log.jsonl` and the HF export are listed in the bucket with the right sizes; delete bucket files only with a `--dry-run` first and a filter that names what to keep.
@@ -120,15 +120,14 @@ rclone lsf r2:mygpt/hf/my-gpt-350m-base/ --format "sp"
 git add reports/export-main.txt && git commit -m "Main run: HF export" && git push
 ```
 
-Optional private Hub copy (needs `HF_TOKEN` exported in this shell):
+Optional private Hub copy (needs `HF_TOKEN` exported in this shell). Re-running the export with `--push` creates the repo private and uploads the folder:
 
 ```bash
 hf auth login --token $HF_TOKEN
-hf repos create <you>/my-gpt-350m-base --private
-hf upload <you>/my-gpt-350m-base hf/my-gpt-350m-base . --private
+python -m mygpt.export_hf --ckpt runs/main_350m --out hf/my-gpt-350m-base --push <you>/my-gpt-350m-base
 ```
 
-Open `https://huggingface.co/<you>/my-gpt-350m-base` while logged in: it shows the "Private" badge and the files.
+The last lines read `uploaded to https://huggingface.co/<you>/my-gpt-350m-base (private)` and how to make it public in Module 11. Open that URL while logged in: it shows the "Private" badge and the files.
 
 ### 5. Copy the evidence off and terminate (5 min)
 

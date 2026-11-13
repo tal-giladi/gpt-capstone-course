@@ -15,7 +15,7 @@ git clone <your project repo> && cd <repo>
 python3 -m venv .venv && source .venv/bin/activate      # or: uv venv && source .venv/bin/activate
 pip install -U pip
 pip install -e ".[dev]"            # core: torch (PyPI wheel = CUDA 13.0 build, needs driver >= 580), tiktoken, ...
-pip install -e ".[post,eval]"      # + TRL/PEFT/accelerate, judge SDKs, lm-eval (Modules 8-10)
+pip install -e ".[post,eval]"      # + TRL/PEFT/accelerate, judge SDKs, lm-eval[hf] (Modules 8-10; .[eval] alone is enough for Module 8)
 pip install -e ".[demo]"           # + gradio (Module 11)
 pytest -q                          # < 2 min, CPU is enough; also passes on the GPU box
 nvidia-smi && python -c "import torch; print(torch.__version__, torch.cuda.is_available())"
@@ -28,7 +28,7 @@ not import torch at all.
 Pins (lower bound = current stable on 2026-11-13, upper = next major): torch 2.15, numpy 2.5,
 pyyaml 6.0.3, tiktoken 0.14, tokenizers 0.23, datasets 5.2, huggingface_hub 2.4, pyarrow 26,
 wandb 0.31, transformers 5.22, safetensors 0.8; `[post]` trl 1.17, peft 0.21, accelerate 1.15,
-anthropic 2.8, openai 3.50; `[eval]` lm-eval 0.4.13; `[demo]` gradio 6.32; `[dev]` pytest 9.2.
+anthropic 2.8, openai 3.50; `[eval]` lm-eval[hf] 0.4.13; `[demo]` gradio 6.32; `[dev]` pytest 9.2.
 
 ## Layout
 
@@ -41,8 +41,8 @@ anthropic 2.8, openai 3.50; `[eval]` lm-eval 0.4.13; `[demo]` gradio 6.32; `[dev
 | `mygpt/tokenizer.py` | `get_tokenizer("gpt2" or DIR)`, `train_bpe` |
 | `mygpt/checkpoint.py` | atomic save, keep-last-N, latest, rclone push/pull |
 | `mygpt/train.py` | training entry point (torchrun or single process) |
-| `mygpt/evaluate.py` | val loss, bits-per-byte, quick HellaSwag |
-| `mygpt/export_hf.py` | checkpoint -> `GPT2LMHeadModel` / `LlamaForCausalLM` / `Qwen3ForCausalLM` |
+| `mygpt/evaluate.py` | val loss, bits-per-byte (`--batch N`, `--eval-tokens all` for the whole split), quick HellaSwag |
+| `mygpt/export_hf.py` | checkpoint -> `GPT2LMHeadModel` / `LlamaForCausalLM` / `Qwen3ForCausalLM`; `--push` creates a private Hub repo (`--no-private` for public) |
 | `scripts/` | data, benchmark, post-training and ops scripts (below) |
 | `configs/` | `smoke_cpu`, `baseline_124m`, `ablation_base`, `main_350m` |
 | `tests/` | pytest, CPU-only |
@@ -55,7 +55,7 @@ python scripts/download_fineweb.py --subset sample-10BT --out data/raw/sample-10
 python scripts/train_tokenizer.py --input data/raw/sample-100BT --vocab-size 32768 --max-docs 2000000 --out tokenizers/bpe32k
 python scripts/tokenize_shards.py --input data/raw/sample-10BT --tokenizer gpt2 --out data/tok/gpt2-10BT --workers 32
 python scripts/token_report.py --shards data/tok/gpt2-10BT                                  # -> data/tok/gpt2-10BT/token_report.json
-python scripts/decontam.py --shards-or-parquet data/tok/gpt2-10BT --tokenizer gpt2 --benchmarks hellaswag,arc_easy,arc_challenge,piqa --out decontam.json
+python scripts/decontam.py --shards-or-parquet data/tok/gpt2-10BT --tokenizer gpt2 --benchmarks hellaswag,arc_easy,arc_challenge,piqa --out decontam.json   # also: winogrande, lambada_openai
 python scripts/tokenize_shards.py --input data/raw/sample-100BT --tokenizer tokenizers/bpe32k --out data/tok/bpe32k-100BT-30 --exclude drop.json   # skip docs flagged by decontam --drop
 
 # --- bucket (rclone; root = $MYGPT_REMOTE, default r2:mygpt; only ever `rclone copy`) ---
@@ -66,10 +66,10 @@ bash scripts/sync.sh pull-ckpt baseline_124m runs/baseline_124m     # newest che
 bash scripts/autoshutdown.sh --idle-minutes 20 --grace-minutes 10 &  # --stop-cmd '...' for non-RunPod providers
 python scripts/bench.py --config configs/baseline_124m.yaml --price-per-gpu-hour 2.99 --json bench.jsonl
 python -m mygpt.train --config configs/smoke_cpu.yaml                                     # CPU smoke test, < 1 min
-torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/baseline_124m.yaml train.wandb_project=my-gpt
+torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/baseline_124m.yaml train.wandb_project=my-gpt   # W&B alerts on NaN stop / finish (train.wandb_alerts=false: off)
 python -m mygpt.train --config configs/ablation_base.yaml model.pos_emb=rope train.out_dir=runs/abl_rope train.run_name=abl_rope
-python -m mygpt.evaluate --ckpt runs/baseline_124m --hellaswag -1                         # file or run dir
-python -m mygpt.export_hf --ckpt runs/main_350m --out hf/my-gpt-350m                      # --push you/my-gpt-350m to upload
+python -m mygpt.evaluate --ckpt runs/baseline_124m --hellaswag -1                         # file or run dir; --eval-tokens all --batch 16
+python -m mygpt.export_hf --ckpt runs/main_350m --out hf/my-gpt-350m                      # --push you/my-gpt-350m: upload to a PRIVATE repo
 
 # --- eval / post-training ---
 lm_eval --model hf --model_args pretrained=hf/my-gpt-350m,dtype=bfloat16 --tasks hellaswag,arc_easy,arc_challenge,piqa --batch_size 32
@@ -140,3 +140,8 @@ Not run locally (no GPU): CUDA, bf16 autocast on GPU, `torch.compile`, multi-pro
 torchrun (Windows torchrun lacks libuv), NCCL, rclone uploads, wandb, real FineWeb downloads,
 judge API calls, gradio (installed only). Run `pytest -q` and `scripts/bench.py` on the GPU box
 before spending money on a long run.
+
+Windows: on a cp1252 console lm-eval 0.4.13 writes its results and then crashes with
+`UnicodeEncodeError` while printing the table; set `PYTHONUTF8=1` before running `lm_eval`.
+W&B (`train.wandb_alerts`), `export_hf --push` and the WinoGrande/LAMBADA loaders in `decontam.py`
+are tested with mocks only (no network).

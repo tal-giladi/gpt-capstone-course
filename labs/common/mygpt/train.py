@@ -249,6 +249,17 @@ def train(cfg: Config) -> dict:
         barrier()
         return path
 
+    def alert(title: str, text: str, level: str = "INFO"):
+        """W&B alert (email/Slack per the user's W&B settings); never lets a failure stop training."""
+        if run is None or not t.wandb_alerts:
+            return
+        try:
+            import wandb
+            lvl = getattr(getattr(wandb, "AlertLevel", None), level, None)
+            run.alert(title=title, text=text, **({"level": lvl} if lvl is not None else {}))
+        except Exception as e:  # noqa: BLE001 - alerts are best effort
+            print(f"[train] wandb alert failed: {e}")
+
     def log(rec: dict):
         if master:
             log_f.write(json.dumps(rec) + "\n")
@@ -293,6 +304,9 @@ def train(cfg: Config) -> dict:
                 if master:
                     print(f"[train] non-finite loss/grad at step {step_done} (loss={last_loss}, grad_norm={gn}). "
                           f"Stopping. Last good checkpoint: {last_good or 'none'}")
+                    alert(f"{t.run_name}: non-finite loss at step {step_done}",
+                          f"loss={last_loss}, grad_norm={gn}. Training stopped. "
+                          f"Last good checkpoint: {last_good or 'none'}", "ERROR")
                 exit_code = 1
                 break
             for opt in optimizers:
@@ -342,6 +356,9 @@ def train(cfg: Config) -> dict:
             if stopping:
                 stopped = True
                 break
+            if last and master:
+                alert(f"{t.run_name}: finished", f"{step_done} steps, final loss {last_loss:.4f}. "
+                      f"Last checkpoint: {last_good or 'none'}")
     finally:
         signal.signal(signal.SIGTERM, old_handler)
         if master:

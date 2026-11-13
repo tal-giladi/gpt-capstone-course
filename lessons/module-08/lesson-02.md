@@ -139,19 +139,19 @@ python tools/hf_bpb.py --model hf/baseline-124m --data-dir data/tok/common-val-g
   --json reports/bpb/baseline-124m-hf.json
 python tools/hf_bpb.py --model hf/my-gpt-350m-base --data-dir data/tok/common-val-bpe32k --eval-tokens all \
   --json reports/bpb/my-gpt-350m-base-hf.json
-grep mygpt_evaluate_eval_tokens reports/bpb/*-hf.json
 ```
 
-The last line prints, per tokenization, the token count that covers the same windows natively. Use it:
+`mygpt.evaluate --eval-tokens all` (or `-1`) covers the same full windows natively:
 
 ```bash
 python -m mygpt.evaluate --ckpt runs/baseline_124m --data-dir data/tok/common-val-gpt2 \
-  --eval-tokens <gpt2 count> | tee reports/bpb/baseline-124m-native.json
+  --eval-tokens all | tee reports/bpb/baseline-124m-native.json
 python -m mygpt.evaluate --ckpt runs/main_350m --data-dir data/tok/common-val-bpe32k \
-  --eval-tokens <bpe32k count> | tee reports/bpb/my-gpt-350m-base-native.json
+  --eval-tokens all | tee reports/bpb/my-gpt-350m-base-native.json
+grep '"eval_tokens"' reports/bpb/*.json
 ```
 
-Native and HF numbers for the same model must agree within ~0.002 bpb (bf16 rounding); a bigger gap means the export is not the model you trained. Then write `reports/bpb.md`: one row per model with val loss, bytes per token and bpb, and the home-field note from above.
+By default `mygpt.evaluate` reads the training micro-batch per forward pass (64 sequences for the baseline, 32 for the main run), which fits the 80 GB H100; on a 24 GB card add `--batch 16`, which changes the speed, not the windows. The last line must show the same `eval_tokens` in the native and HF file of each model. Native and HF numbers for the same model must agree within ~0.002 bpb (bf16 rounding); a bigger gap means the export is not the model you trained. Then write `reports/bpb.md`: one row per model with val loss, bytes per token and bpb, and the home-field note from above.
 
 ### 4. The four-model table with intervals (10 min)
 
@@ -169,12 +169,13 @@ Read the comparison blocks row by row. For each task write one sentence in your 
 Copy the HellaSwag/ARC/PIQA numbers (items with an overlap, documents removed, share of tokens) for both shard sets from `TOKEN_REPORT.md` into `reports/contamination.md`. For WinoGrande and LAMBADA, either write "not checked", or scan for them on a cheap CPU box as in 03.3 (Hetzner CPX62, ~€0.18/h), on the **filtered** training shards:
 
 ```bash
-python tools/bench_texts.py --out reports/bench_wg_lambada.jsonl
 python scripts/decontam.py --shards-or-parquet data/tok/bpe32k-100BT-30 --tokenizer data/tok/bpe32k-100BT-30 \
-  --benchmark-file reports/bench_wg_lambada.jsonl --out reports/decontam-wg-lambada-bpe32k.json
+  --benchmarks winogrande,lambada_openai --out reports/decontam-wg-lambada-bpe32k.json
 python scripts/decontam.py --shards-or-parquet data/tok/gpt2-10BT --tokenizer gpt2 \
-  --benchmark-file reports/bench_wg_lambada.jsonl --out reports/decontam-wg-lambada-gpt2.json
+  --benchmarks winogrande,lambada_openai --out reports/decontam-wg-lambada-gpt2.json
 ```
+
+`decontam.py` downloads the splits lm-eval scores (WinoGrande `winogrande_xl` validation with the blank filled by the correct option, LAMBADA-OpenAI test passages). On a box without Hub access, write them elsewhere with `python tools/bench_texts.py --out reports/bench_wg_lambada.jsonl` and pass `--benchmark-file reports/bench_wg_lambada.jsonl` instead of `--benchmarks`.
 
 Expect few or no WinoGrande hits and a handful of LAMBADA items matching common phrases. Read two or three flagged examples before you judge; with this scan you only report, you do not retrain.
 
@@ -200,8 +201,8 @@ RunPod console → the pod → **Terminate**.
 |---|---|---|
 | `tokenizer mismatch` from `hf_bpb.py` | GPT-2 model pointed at `common-val-bpe32k`, or your model at `common-val-gpt2` | Each model reads the set made with its own tokenizer |
 | bpb of an OpenAI model far above ~1.1 | Evaluated only a few windows, or `--seq-len` above 1,024 | Use `--eval-tokens all`; GPT-2's context is 1,024 |
-| Native and HF bpb differ by more than ~0.005 | `--eval-tokens` not the printed count (different windows), or a broken export | Re-run with the exact count; if it persists, recheck the export's logit test |
-| `CUDA out of memory` in `mygpt.evaluate` | It uses the training micro-batch (64 for the baseline) | Use the 80 GB H100 as recommended; on a smaller card, see this module's code request |
+| Native and HF bpb differ by more than ~0.005 | Different windows (`eval_tokens` differs between the two JSON files, e.g. one run without `--eval-tokens all`), or a broken export | Re-run both with `--eval-tokens all`; if it persists, recheck the export's logit test |
+| `CUDA out of memory` in `mygpt.evaluate` | It uses the training micro-batch by default (64 for the baseline) | Add `--batch 16` (or 8); the windows and the result stay the same |
 | `eval_table.py` warns about different `limit` or `n-shot` | One run used a test setting | Rerun that model with the settings in `reports/eval_settings.md`; never mix |
 | A comparison says "unpaired, from stderr" | One of the runs lacks `--log_samples` | Rerun it with `--log_samples`; the paired interval is the one to report |
 | Your 350M loses to GPT-2 medium on HellaSwag | Fewer tokens than needed, or a recipe problem | Report it as it is, with the interval; the bpb and curves show where the model stands. An honest loss is a valid result |

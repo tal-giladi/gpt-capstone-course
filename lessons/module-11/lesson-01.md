@@ -45,7 +45,7 @@ Two public model repos on the Hugging Face Hub: `<you>/my-gpt-350m-base` (your p
 ## What you need
 
 - Your three exported models in the bucket: `r2:mygpt/hf/my-gpt-350m-base/` ([07.3](../module-07/lesson-03.md)), `hf/my-gpt-350m-sft/` ([09.2](../module-09/lesson-02.md)) and the DPO model you chose in [10.2](../module-10/lesson-02.md) (`hf/my-gpt-350m-dpo/` or `-dpo-b01/`).
-- Your reports in git: `DATA_CARD.md` (02.3), `TOKEN_REPORT.md` (03.3), the eval report from 08.3, `reports/alignment_results.md` and `reports/winrate.json` (10.2), `budget.md`.
+- Your reports in git: `DATA_CARD.md` (02.3), `TOKEN_REPORT.md` (03.3), `EVAL_REPORT.md` (08.3), `reports/alignment_results.md` and `reports/winrate.json` (10.2), `budget.md`.
 - A Hugging Face **write** token in your password manager ([01.2](../module-01/lesson-02.md)); about 4 GB of free disk on your laptop.
 - The [Module 11 lab files](../../labs/module-11/) in your repo's `tools/` (and `MODEL_CARD.template.md` next to them).
 - About 2.5 hours, all on your laptop. **Expected cost: $0** (R2 egress is free, public Hub storage is free).
@@ -139,7 +139,7 @@ Fill every `<...>` and `____` from your own files, never from memory:
 | Architecture, params | `release/my-gpt-350m-base/mygpt_export.json`, `configs/main_350m.yaml` |
 | Training data, revisions, attribution | `DATA_CARD.md`, `manifests/*.json`, `reports/sft_data.md`, `reports/dpo_runs.md` |
 | Decontamination | `TOKEN_REPORT.md`, `reports/decontam-*.json` |
-| Evaluation table | the eval report from 08.3; regression rows from `evals/regression.md` (10.2) |
+| Evaluation table | `EVAL_REPORT.md` (08.3); regression rows from `evals/regression.md` (10.2) |
 | Win rate | `reports/winrate.json`, `reports/alignment_results.md` |
 | Limitations | `reports/sft_probe.md`, `reports/dpo_probe.md`: paste two real failures |
 | Compute and cost | `budget.md`, `reports/main-run-log.md` |
@@ -175,13 +175,13 @@ hf upload $U/my-gpt-350m-base release/my-gpt-350m-base . --commit-message "v1.0:
 `--revision sft` creates the branch `sft` from `main` and then replaces its files with the SFT model's. Open both repos in the browser while logged in: the card renders, the metadata shows license, datasets and the eval widget, and the **Files** tab shows only the files you meant to publish.
 
 > [!WARNING]
-> `hf upload` (and `export_hf --push`) to a repo that does not exist creates it with the default visibility, which is **public** for a personal account. Always create the repo with `--private` first, as above.
+> `hf upload` to a repo that does not exist creates it with the default visibility, which is **public** for a personal account. Always create the repo with `--private` first, as above. (`export_hf --push` creates its repo private by default and prints the command that makes it public.)
 
 ### 4. Make them public and tag v1.0 (5 min)
 
 ```bash
-hf repos settings $U/my-gpt-350m --private false
-hf repos settings $U/my-gpt-350m-base --private false
+hf repos settings $U/my-gpt-350m --public
+hf repos settings $U/my-gpt-350m-base --public
 hf repos tag create $U/my-gpt-350m v1.0
 hf repos tag create $U/my-gpt-350m v1.0-sft --revision sft
 hf repos tag create $U/my-gpt-350m-base v1.0
@@ -235,7 +235,7 @@ Only the weights file needs to be there; the Hub stays the place people load fro
 |---|---|---|
 | `check_release.py`: `training_args.bin: pickle-based file` | You uploaded TRL's output folder as is | Rebuild the release folder with the `KEEP` list in step 1 |
 | The Hub shows a TRL-generated card ("This model is a fine-tuned version of...") | TRL wrote `README.md` into the output folder and it was uploaded | Replace it with your card and upload `README.md` again |
-| `401` / `Repository Not Found` in the clean env | Repo still private, or you typed the username wrong | `hf repos settings ... --private false`; check the URL in a logged-out browser window |
+| `401` / `Repository Not Found` in the clean env | Repo still private, or you typed the username wrong | `hf repos settings ... --public`; check the URL in a logged-out browser window |
 | `OSError: ... does not appear to have a file named config.json` for `revision="sft"` | The `sft` upload went to `main` or failed | `hf repos branch create $U/my-gpt-350m sft` then rerun the `--revision sft` upload |
 | Pipeline returns the prompt plus rambling text for the chat model | You passed a string instead of a messages list, so no chat template was applied | Pass `[{"role": "user", "content": ...}]`; check `chat_template.jinja` was uploaded |
 | Answers in the clean env differ from `chat.py` | Sampling on, or a different revision or dtype | Use `do_sample=False`, the `v1.0` tag, and fp32 on CPU |

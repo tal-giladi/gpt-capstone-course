@@ -38,7 +38,7 @@ Your training log already holds a HellaSwag number, but it was measured by your 
 - `r2:mygpt/hf/my-gpt-350m-base/` from [07.3](../module-07/lesson-03.md) and `r2:mygpt/ckpt/baseline_124m/` (final checkpoint and log) from [05.3](../module-05/lesson-03.md).
 - The `mygpt-gpu` RunPod template from [04.2](../module-04/lesson-02.md) and RunPod credit.
 - The [Module 8 lab files](../../labs/module-08/) copied into `tools/` and committed.
-- On your laptop: the project venv with `pip install -e ".[post,eval]"` (lm-eval needs torch, transformers and accelerate, which the `[post]` extra brings).
+- On your laptop: the project venv with `pip install -e ".[eval]"` (the extra installs `lm-eval[hf]`, so lm-eval brings its Hugging Face backend: transformers, accelerate, peft).
 - About 1.5 hours, ~45 minutes of it on the GPU box.
 - **Expected cost: ~$2** (about 0.7 h of a 1×H100 SXM Community pod at $2.69/h, checked 2026-11-13). 08.2 continues on the same pod for ~$3 more.
 
@@ -89,7 +89,7 @@ Same weights, three numbers. Rule for this course: **acc_norm** for HellaSwag, A
 | Box | Price | Fits | Verdict |
 |---|---|---|---|
 | Your laptop CPU | $0 | Pipeline tests with `--limit` (minutes) | The full suite takes many hours per model on a CPU: test only |
-| RunPod Community RTX 4090 (24 GB) | ~$0.34/h | lm-eval for all four models | Cheap, but 08.2's `mygpt.evaluate` on the baseline uses micro-batch 64 × 1,024 with a 50k vocabulary, which needs more than 24 GB |
+| RunPod Community RTX 4090 (24 GB) | ~$0.34/h | lm-eval for all four models; 08.2's `mygpt.evaluate` with `--batch 16` | Cheap, but slower, and you must remember `--batch 16`: by default `mygpt.evaluate` uses the training micro-batch (64 × 1,024 with a 50k vocabulary for the baseline), which needs more than 24 GB |
 | **RunPod Community 1×H100 SXM (80 GB)** | $2.69/h | Everything in 08.1 and 08.2 | **Recommended**: ~1.5 h for both lessons, ~$4–5 |
 | 8×H100 | $35/h | | Never for evaluation |
 
@@ -127,7 +127,7 @@ RunPod → **Community Cloud** → **H100 SXM**, 1 GPU, template `mygpt-gpu` →
 ```bash
 nohup bash -c 'sleep 4h; runpodctl pod stop $RUNPOD_POD_ID' >/tmp/hardstop.log 2>&1 &
 git clone https://github.com/<you>/<your-repo>.git ~/mygpt && bash ~/mygpt/tools/setup_box.sh
-cd ~/mygpt && . .venv/bin/activate && pip install -e ".[post,eval]"
+cd ~/mygpt && . .venv/bin/activate && pip install -e ".[eval]"
 tmux new -d -s guard "bash scripts/autoshutdown.sh --idle-minutes 30 --stop-cmd 'runpodctl pod stop $RUNPOD_POD_ID'"
 bash scripts/sync.sh pull-hf my-gpt-350m-base hf/my-gpt-350m-base
 bash scripts/sync.sh pull-ckpt baseline_124m runs/baseline_124m          # final checkpoint + log, ~1.5 GB
@@ -188,7 +188,7 @@ Only the small `results_*.json` files go into git; the `samples_*.jsonl` files (
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `ModuleNotFoundError: transformers` / `accelerate` from lm-eval | Since its December 2025 packaging change, lm-eval no longer installs the HF backend by itself | `pip install -e ".[post,eval]"` (or `pip install "lm_eval[hf]==0.4.13"`) |
+| `ModuleNotFoundError: transformers` / `accelerate` from lm-eval | Since its December 2025 packaging change, lm-eval installs the HF backend only with its `[hf]` extra; your checkout predates the `[eval]` extra that asks for it, or lm-eval was installed by hand | Pull the course code and run `pip install -e ".[eval]"` again (the extra is `lm-eval[hf]>=0.4.13,<0.5`) |
 | `UnicodeEncodeError` at the end on Windows | The table contains arrows the console code page cannot print | `set PYTHONUTF8=1` (PowerShell: `$env:PYTHONUTF8=1`); the results JSON was already written |
 | Your model scores exactly chance on every task | Wrong tokenizer in the export, or the model loaded with random weights | `python scripts/chat.py --model hf/my-gpt-350m-base --prompt "The capital of France is"`; check `mygpt_export.json` |
 | `Token indices sequence length is longer than the specified maximum` | A few LAMBADA or HellaSwag items exceed 1,024 tokens | lm-eval truncates from the left; harmless for these tasks |

@@ -1,5 +1,7 @@
 """Write the WinoGrande and LAMBADA items lm-eval scores as a --benchmark-file for
 `scripts/decontam.py` (lesson 08.2). Module 3 checked HellaSwag, ARC and PIQA; these two were not.
+`decontam.py --benchmarks winogrande,lambada_openai` now loads the same items itself; this file is
+for scanning on a box without Hub access (write the JSONL elsewhere, copy it over).
 
     python tools/bench_texts.py --out reports/bench_wg_lambada.jsonl
     python scripts/decontam.py --shards-or-parquet data/tok/bpe32k-100BT-30 --tokenizer data/tok/bpe32k-100BT-30 \

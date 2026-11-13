@@ -35,7 +35,7 @@ model-index:
             value: ____
         source:
           name: lm-eval-harness 0.4.13, own run (see Evaluation)
-          url: https://github.com/<your-username>/<your-repo>/blob/v1.0/reports/eval_report.md
+          url: https://github.com/<your-username>/<your-repo>/blob/v1.0/EVAL_REPORT.md
 ---
 
 # my-gpt-350m

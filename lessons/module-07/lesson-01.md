@@ -81,6 +81,7 @@ ESTIMATE: billed hours include setup, evals, checkpoints and one resume, from 06
 |---|---|---|---|
 | Phone push from `tools/watch_run.py --ntfy <topic>` | ntfy.sh public server + ntfy app | $0 | Stale log (hang, dead node), NaN, unrecovered loss spike, sustained slowdown, cost overrun |
 | W&B "Run finished" / "Run crashed" email | W&B User Settings → Alerts | $0 (free tier) | The run ended, or stopped sending heartbeats (process killed, node gone) |
+| W&B scriptable alert from `train.py` (`run.alert()`) | W&B User Settings → Alerts → Scriptable run alerts | $0 (free tier) | NaN/Inf stop (with the last good checkpoint) and the final step; on by default with W&B, `train.wandb_alerts=false` turns it off |
 | Provider low-balance email | Provider billing settings, where offered | $0 | Running out of credit before the run ends |
 | You, looking at the W&B charts | Laptop or phone browser | $0 | Everything else: the shape of the curves |
 
@@ -107,7 +108,7 @@ Write the launch block in `budget.md`: provider, price, predicted billed hours a
 
 ### 2. Set up the alerts (10 min, laptop and phone)
 
-1. W&B → avatar → **User Settings** → **Alerts**: enable **Run finished** and **Run crashed** by email.
+1. W&B → avatar → **User Settings** → **Alerts**: enable **Run finished**, **Run crashed** and **Scriptable run alerts** by email (the last one delivers `train.py`'s NaN-stop and finished alerts).
 2. Make a topic name and subscribe to it in the ntfy app:
 
    ```bash

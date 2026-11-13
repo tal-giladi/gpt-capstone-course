@@ -4,7 +4,14 @@ The final, reportable numbers come from lm-eval-harness on the exported HF model
 these are cheap signals to watch during training.
 
 CLI: python -m mygpt.evaluate --ckpt runs/x/ckpt_00010000.pt [--data-dir DIR] [--hellaswag 1000]
+         [--eval-tokens N | -1 | all] [--batch N]
      (--ckpt may also be a run dir: its newest ckpt_*.pt is used)
+
+Windows: contiguous seq_len blocks from the start of the val split, read --batch sequences per
+forward pass (default: the checkpoint's training micro_batch_size; lower it to fit a smaller GPU).
+--eval-tokens -1 (or `all`) evaluates every full window of the split, grouped by lcm(64, batch) x
+seq_len as labs/module-08/hf_bpb.py does, so batches 64, 32, 16, 8 ... evaluate the same token count
+(and the very same windows when the val split is one shard, as the common val set is).
 """
 from __future__ import annotations
 
@@ -50,6 +57,23 @@ def bits_per_byte(loss_nats: float, tokens: int, nbytes: int) -> float:
     if not tokens or not nbytes:
         return float("nan")
     return loss_nats / math.log(2) * tokens / nbytes
+
+
+def full_window_tokens(lengths: list[int], seq_len: int, group: int = 64) -> int:
+    """Tokens the val loader covers when every shard is read in chunks of group*seq_len
+    (a chunk needs one extra token for the shifted targets)."""
+    chunk = group * seq_len
+    return sum((n - 1) // chunk for n in lengths) * chunk
+
+
+def parse_eval_tokens(value: str) -> int:
+    """--eval-tokens: a token count (1e7 style accepted), or -1 / `all` for the whole split."""
+    if str(value).strip().lower() in ("all", "-1"):
+        return -1
+    n = int(float(value))
+    if n <= 0:
+        raise argparse.ArgumentTypeError(f"--eval-tokens must be positive, -1 or 'all' (got {value})")
+    return n
 
 
 def val_bytes_per_token(meta: dict) -> tuple[int, int]:
@@ -132,7 +156,10 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Evaluate a mygpt checkpoint (val loss, bpb, HellaSwag).")
     p.add_argument("--ckpt", required=True, help="checkpoint file, or a run dir (newest ckpt_*.pt)")
     p.add_argument("--data-dir", default=None, help="shards dir (default: the run's data_dir)")
-    p.add_argument("--eval-tokens", type=int, default=10_485_760)
+    p.add_argument("--eval-tokens", type=parse_eval_tokens, default=10_485_760,
+                   help="val tokens to evaluate (default 10485760), or -1 / all for every full window of the split")
+    p.add_argument("--batch", type=int, default=None,
+                   help="sequences per forward pass (default: the checkpoint's training micro_batch_size)")
     p.add_argument("--hellaswag", type=int, default=0, help="number of HellaSwag examples (0 = skip, -1 = all)")
     p.add_argument("--tokenizer", default=None, help="gpt2 | DIR (default: from shards meta.json)")
     args = p.parse_args(argv)
@@ -158,9 +185,21 @@ def main(argv=None):
     meta = read_meta(data_dir)
     out = {"ckpt": ckpt, "step": ck["step"]}
     if os.path.isdir(data_dir):
-        B, T = cfg.train.micro_batch_size, cfg.train.seq_len
+        B, T = args.batch or cfg.train.micro_batch_size, cfg.train.seq_len
+        if B <= 0:
+            raise SystemExit(f"--batch must be positive (got {B})")
         loader = DistributedTokenLoader(data_dir, "val", B, T, device=device)
-        out["val_loss"] = val_loss(model, loader, max(1, args.eval_tokens // (B * T)), ctx)
+        n_tokens = args.eval_tokens
+        if n_tokens < 0:
+            n_tokens = full_window_tokens(loader.ds.lengths, T, math.lcm(64, B))
+            if n_tokens == 0:
+                raise SystemExit(f"val split too small for one {math.lcm(64, B)} x {T} chunk; pass --eval-tokens N")
+        elif n_tokens % (B * T):
+            print(f"[evaluate] --eval-tokens {n_tokens} is not a multiple of batch x seq_len = {B * T}; "
+                  f"evaluating {max(1, n_tokens // (B * T)) * B * T} tokens")
+        steps = max(1, n_tokens // (B * T))
+        out.update(batch=B, seq_len=T, eval_tokens=steps * B * T)
+        out["val_loss"] = val_loss(model, loader, steps, ctx)
         out["val_bpb"] = bits_per_byte(out["val_loss"], *val_bytes_per_token(meta))
     if args.hellaswag:
         tok = get_tokenizer(args.tokenizer or resolve_tokenizer(data_dir, meta) or "gpt2")

@@ -42,7 +42,7 @@ The model and the demo show what you built; the technical report shows how you t
 
 ## What you need
 
-- Everything committed in Modules 1–11: `budget.md`, `DATA_CARD.md`, `TOKEN_REPORT.md`, `results/ablations.md`, `decisions/0001-main-run-recipe.md`, `reports/` (main-run log, eval report from 08.3, SFT and DPO reports, `winrate.json`, `demo.md`), `configs/`.
+- Everything committed in Modules 1–11: `budget.md`, `DATA_CARD.md`, `TOKEN_REPORT.md`, `results/ablations.md`, `decisions/0001-main-run-recipe.md`, `EVAL_REPORT.md` (08.3), `reports/` (main-run log, SFT and DPO reports, `winrate.json`, `demo.md`), `configs/`.
 - Logins to every provider you used: RunPod (and Lambda, Vast.ai if you used them), Hetzner, Cloudflare, Hugging Face, W&B, GitHub, your LLM API console.
 - The [Module 11 lab files](../../labs/module-11/): `ledger_summary.py` in `tools/`, `TECH_REPORT.template.md`.
 - About 3–4 hours of writing and 30 minutes of cleanup. **Expected cost: $0**, and the cleanup should bring your monthly run-rate to about $0.
@@ -58,7 +58,7 @@ The model and the demo show what you built; the technical report shows how you t
 | Tokenizer | 32k BPE vs GPT-2 bytes/token | `reports/compare_tokenizers.json` |
 | Architecture and ablations | Ablation table, seed noise, chosen recipe | `results/ablations.md`, `decisions/0001-*.md` |
 | Training | Hardware, throughput, MFU, wall time, loss curve, incidents | `reports/main-run-log.md`, `log.jsonl`, W&B |
-| Evaluation | vs OpenAI GPT-2 124M/355M and your baseline, bpb on common val | the eval report from 08.3 |
+| Evaluation | vs OpenAI GPT-2 124M/355M and your baseline, bpb on common val | `EVAL_REPORT.md` (08.3) |
 | Alignment | SFT/DPO data and settings, probes, win rate with CI and biases, regression | `reports/sft_*.md`, `alignment_results.md`, `winrate.json` |
 | Cost | Planned vs actual per module, GPU-hours, CO2 estimate | `budget.md` via `ledger_summary.py` |
 | Lessons learned | What went wrong, what it cost, what you would change | Run logs, ledger |

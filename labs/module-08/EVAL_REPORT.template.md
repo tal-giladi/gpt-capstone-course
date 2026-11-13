@@ -52,7 +52,7 @@ the 95% interval of the difference excludes 0.
 
 - Contamination: <HellaSwag, ARC-Easy, ARC-Challenge, PIQA: documents sharing a 13-gram with any
   item were removed from both training sets (TOKEN_REPORT.md: n docs, x%). WinoGrande and
-  LAMBADA: <checked with tools/bench_texts.py: n items overlap | not checked>. OpenAI GPT-2:
+  LAMBADA: <checked with decontam.py --benchmarks winogrande,lambada_openai: n items overlap | not checked>. OpenAI GPT-2:
   WebText contents unknown.>
 - Bits per byte is measured on FineWeb-Edu text, the distribution your models were trained on and
   OpenAI's were not; it favours your models and is not a general claim about language modelling.
