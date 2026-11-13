@@ -1,0 +1,123 @@
+- id: q1
+  question: >-
+    Your measured speeds predict 9 billed hours for the main run at $35.12/h on RunPod Secure. A RunPod
+    savings plan would cut the hourly price by about 20%. Is it worth it for this run?
+  options:
+    - Yes; 20% of a ~$316 run saves about $63, more than enough to pay for evaluation.
+    - Yes, but only if you also run Modules 9 and 10 on the same 8-GPU node afterwards.
+    - No; the plan commits you to a month of the GPU type, far more than the 9 hours you need.
+    - No; savings plans apply only to Community Cloud, where 8-GPU nodes are rarely available.
+  correct: 2
+  explanation: >-
+    Savings plans are non-refundable commitments over a month or more, so you would pay for hundreds of
+    hours to discount nine. Reservations make sense for sustained use, not for a single short job.
+- id: q2
+  question: >-
+    Preflight shows `FAIL git uncommitted changes to tracked files (1)`. The diff is your own edit on the
+    node: `muon_lr: 0.02` changed to `0.025` because you "had a feeling". What do you do?
+  options:
+    - Launch anyway, then commit the change from the node once the run looks healthy.
+    - Revert the edit and launch the frozen recipe; a change needs evidence and a new tag.
+    - Keep the edit but pass `--skip git` to preflight, since the config is still valid.
+    - Commit it as recipe-v2 on the node, since a tagged change is as good as a tested one.
+  correct: 1
+  explanation: >-
+    The frozen recipe exists so that you know what you paid for and why. A last-minute LR change without an
+    ablation is exactly what 06.4's rule forbids; a new tag would record the change but not justify it.
+- id: q3
+  question: >-
+    Two hours in, the watcher has been silent for 25 minutes, your phone received no alerts, and W&B shows
+    the run as crashed. What do you check first?
+  options:
+    - The provider console, to see whether the node is still running or has died.
+    - The loss curve on W&B, to see whether a spike caused the run to stop by itself.
+    - The bucket listing, to confirm that log.jsonl has been uploaded since the crash.
+    - The hard-stop timer on the node, since it may have been set to the wrong duration.
+  correct: 0
+  explanation: >-
+    A silent watcher plus a W&B crash means the whole node stopped sending, so the node itself is the
+    question: if it is gone you terminate it and resume on a new one; if it is up but hung, you kill the
+    run there. A NaN stop would have left the watcher running and alerting.
+- id: q4
+  question: >-
+    During the constant-LR phase the val bpb improves by only 0.004 over 5,000 steps, much slower than
+    earlier. Grad norm and tokens/s are steady. What does it mean?
+  options:
+    - The learning rate is too low; resume with a doubled muon_lr to make faster progress.
+    - The data has started repeating, so check that all train shards are present on the node.
+    - The model has reached its capacity, so stop now and save the remaining node hours.
+    - It is normal for the stable phase; the WSD decay at the end brings the larger drop.
+  correct: 3
+  explanation: >-
+    With WSD the loss improves slowly at constant LR and drops visibly once the LR decays in the last 20%
+    of steps. Stopping now would skip that cooldown, and raising the LR mid-run risks divergence.
+- id: q5
+  question: >-
+    A spike starts at step 21,350 and has not recovered by 21,900; the grad norm began climbing at 21,250.
+    Local checkpoints are 20,000 and 21,000. Which relaunch follows the course's procedure?
+  options:
+    - Resume from 21,000, skip about 550 batches, and move later checkpoints aside.
+    - Resume from 20,000 with skip_batches of 2,000, to be safe against any bad data nearby.
+    - Resume from the checkpoint SIGTERM saves at 21,900, with the learning rate halved.
+    - Resume from 21,000 without skipping, since restarting usually avoids the spike anyway.
+  correct: 0
+  explanation: >-
+    21,000 is the last checkpoint before the trouble began; skipping 21,350 − 21,000 + 200 = 550 batches
+    steps past the data that triggered it, as PaLM did. A diverged checkpoint is no starting point, and
+    skipping 2,000 batches throws away data without reason.
+- id: q6
+  question: >-
+    The 8×H100 node dies at step 26,000 of 38,146. Only a 4×H100 node is available for the next day. What
+    happens if you resume there with `--nproc_per_node=4` and the same config?
+  options:
+    - The run restarts at step 0, since the world size is part of the saved checkpoint.
+    - The loss curve continues unchanged with accumulation 4; only the wall clock doubles.
+    - The effective batch halves, so the learning rate has to be halved on resume as well.
+    - Some data is repeated, because each rank's loader position is stored separately.
+  correct: 1
+  explanation: >-
+    Gradient accumulation keeps the 524,288-token batch, and the loader position is stored as a position in
+    the global token stream, so the run continues exactly. Cost per token stays about the same because you
+    pay for half the GPUs for twice as long.
+- id: q7
+  question: >-
+    At step 25,000 of 38,146 the watcher projects $262 against a planned $187 because of a slow first node.
+    Your money left after the run would be $45, while Modules 8–11 need about $60. What do you do?
+  options:
+    - Continue; Modules 8–11 can run on free CPU resources if the money runs out.
+    - Stop at the next checkpoint and use it as the final model; it is good enough.
+    - Resume with train_tokens of 18B, whose decay starts at step 27,465.
+    - Resume with train_tokens of 16B, which saves the most money of the options.
+  correct: 2
+  explanation: >-
+    For 16B the decay would have had to start at step 24,413, already passed, so the LR would drop
+    abruptly. 18B still allows a full linear decay from 27,465, saves roughly $15–20, and a decayed model
+    beats any stable-phase checkpoint.
+- id: q8
+  question: >-
+    Before terminating, you list the bucket: `ckpt_00038146.pt` is 2.9 GB locally but 1.1 GB in the bucket.
+    What do you do?
+  options:
+    - Terminate; rclone compresses checkpoints, so a smaller remote file is expected.
+    - Export to HF format on the node and upload only the export, which is smaller anyway.
+    - Terminate and pull the checkpoint later; rclone resumes partial uploads automatically.
+    - Upload it again with sync.sh push-ckpt and list again before you terminate.
+  correct: 3
+  explanation: >-
+    A smaller remote file is an interrupted or still-running upload, and rclone copy does not compress.
+    The node holds the only complete copy, so re-upload and confirm equal sizes before the disk disappears.
+- id: q9
+  question: >-
+    `budget.md` shows the main run predicted at $187; the provider's usage page shows $236. The run log
+    lists one dead node (40 minutes lost) and a pod you forgot to terminate for 50 minutes after the run.
+    How do you record it?
+  options:
+    - As $187, since the overrun came from incidents rather than from the run itself.
+    - As $236, with the +26% deviation and one line on each of the two causes.
+    - As $236 without notes, since the technical report only needs the total spent.
+    - As $201, the cost minus the forgotten pod, since that part was not part of the run.
+  correct: 1
+  explanation: >-
+    The ledger records what was actually paid, and the deviation explained by its causes is what makes the
+    next estimate better; Module 11's cost ledger reports it honestly. Hiding incident or idle costs makes
+    the budget look better than reality.

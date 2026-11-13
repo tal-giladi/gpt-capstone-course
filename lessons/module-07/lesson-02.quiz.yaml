@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    At step 18,200 the train loss jumps from 2.95 to 3.20 and the grad norm triples. By step 18,450 the
+    loss is back at 2.96 and the grad norm is normal. What do you do?
+  options:
+    - Roll back to ckpt_00018000.pt and skip 450 batches, since any spike leaves damage behind.
+    - Lower the learning rate on the next resume, so that the spike cannot happen again later.
+    - Write it into the run log as a recovered spike and leave the run alone.
+    - Stop the run and check the shard at that data position for corrupted tokens.
+  correct: 2
+  explanation: >-
+    A spike that heals within a few hundred steps is normal at this scale and costs nothing. Rolling back
+    would repeat about 20 minutes of paid training for no gain; you act only on spikes that do not recover.
+- id: q2
+  question: >-
+    You roll back from a divergence at step 29,430 to ckpt_00029000.pt. You moved ckpt_00030000.pt aside on
+    the node but not in the bucket. Five minutes after the relaunch, at step 29,700, the node dies. What
+    happens when you launch on a fresh node with an empty out_dir?
+  options:
+    - Auto-resume pulls ckpt_00030000.pt, the diverged state, because it is the newest in the bucket.
+    - Auto-resume pulls ckpt_00029000.pt, because the skip_batches setting marks it as the chosen one.
+    - Auto-resume refuses to start, because the bucket's log.jsonl ends before step 30,000.
+    - The run starts at step 0, because the old node's rolled_back folder no longer exists.
+  correct: 0
+  explanation: >-
+    The resumed run has not yet written its own step-30,000 checkpoint, so the newest file in the bucket is
+    still the diverged one, and auto-resume takes the newest. That is why bad checkpoints are moved aside in
+    the bucket as part of the rollback, not later.
+- id: q3
+  question: >-
+    The watcher alerts `slow`: 0.98M tokens/s for 20 minutes instead of 1.30M. `nvidia-smi -q -d
+    PERFORMANCE` shows GPU 5 with an active HW slowdown and a lower clock than the other seven. What now?
+  options:
+    - Lower micro_batch_size on GPU 5 so it finishes its share of each step at the same time.
+    - Wait; thermal events on one GPU pass within an hour and the run then catches up by itself.
+    - Restart the run on the same node with seven GPUs, leaving GPU 5 out of the job.
+    - Stop gracefully and resume on a new node, because every step waits for GPU 5.
+  correct: 3
+  explanation: >-
+    In DDP every rank waits for the slowest one, so a throttled GPU costs about 25% of the whole node.
+    You cannot fix rented hardware, and seven GPUs do not divide the batch; a graceful stop and a new node
+    cost far less than hours at three quarters of the speed.
+- id: q4
+  question: >-
+    At step 20,000 the watcher projects $245 against a plan of $187, and the money left would not cover
+    Modules 8–11. Your WSD schedule decays over the last 20% of steps. What is the safest way to cut cost?
+  options:
+    - Let it run to step 30,516 and then stop, since the model is usable at any point.
+    - Resume with train.train_tokens=16B now, so the decay starts at step 24,413.
+    - Resume with a higher learning rate so the remaining steps make faster progress.
+    - Stop now and use ckpt_00020000.pt as the final model, avoiding further cost.
+  correct: 1
+  explanation: >-
+    Lowering train_tokens before the new decay start gives a properly decayed 16B-token model, which the
+    lab code tests. A model taken from the constant-LR phase misses the cooldown that brings most of the
+    final gain, and raising the LR mid-run risks divergence.

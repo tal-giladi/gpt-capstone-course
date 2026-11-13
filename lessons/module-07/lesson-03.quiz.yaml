@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    The run has finished. `export_hf` fails with `RuntimeError: exported qwen3 logits differ from native by
+    3.1e-01`. The node bills $35 an hour. What do you do first?
+  options:
+    - Terminate the node at once to stop billing, then debug the export on your laptop.
+    - Confirm the final checkpoint is in the bucket with the right size, then debug the export.
+    - Export again with `--dtype bf16`, since a smaller dtype usually removes rounding differences.
+    - Skip the logit check and upload the export anyway, since Module 8 will show if it is broken.
+  correct: 1
+  explanation: >-
+    The native checkpoint is the model; once it is safely in the bucket the export can be fixed anywhere,
+    including on a cheap box. Terminating before checking the upload risks the only copy, and an unchecked
+    export would make every Module 8 number untrustworthy.
+- id: q2
+  question: >-
+    The exported model passes the logit check, but `chat.py` produces a stream of unrelated word pieces.
+    What is the most likely cause?
+  options:
+    - The export saved fp32 weights, and generation needs bf16 weights to produce text.
+    - The final checkpoint is from the constant-LR phase, so the model never converged.
+    - The export attached a different tokenizer than the one the shards were made with.
+    - The chat template is missing, so the base model cannot complete plain prompts.
+  correct: 2
+  explanation: >-
+    The logit check compares weights on random token ids, so it cannot catch a mismatched tokenizer. Text
+    encoded with the wrong vocabulary looks like noise to the model; re-export with the shards' tokenizer.
+- id: q3
+  question: >-
+    You want to free bucket space after the run. Which set of files do you keep in ckpt/main_350m/?
+  options:
+    - Only the HF export under hf/, since the native checkpoints are not needed after export.
+    - The last three checkpoints, matching keep_last, and delete log.jsonl to save space.
+    - Every checkpoint, since a later rollback might need any of them as a starting point.
+    - The final checkpoint, the pre-decay checkpoint at step 30,000, and log.jsonl.
+  correct: 3
+  explanation: >-
+    The final checkpoint allows re-export and exact reproduction, the stable-phase checkpoint lets WSD
+    continue training later with a new decay, and the log is the evidence behind every reported number.
+    The other ~105 GB serve no purpose once the run is finished and checked.
+- id: q4
+  question: >-
+    After terminating the 8×H100 pod, your RunPod balance keeps dropping slowly. What is the most likely
+    reason?
+  options:
+    - A stopped pod or a network volume from another lesson still bills storage.
+    - Terminated pods bill their container disk for 24 hours until it is wiped.
+    - The R2 bucket bills its storage through your RunPod account each hour.
+    - The W&B run is still open, and W&B charges per hour through the provider.
+  correct: 0
+  explanation: >-
+    RunPod bills volume disks of stopped pods ($0.20/GB-month) and network volumes ($0.07/GB-month) whether
+    or not anything runs. A terminated pod bills nothing, and R2 and W&B bill separately or not at all.

@@ -1,0 +1,11 @@
+- **Pre-flight check** — a scripted list of checks run on the rented node right before an expensive launch (frozen commit, data, bucket, logging, GPUs, disk, stop guards, money); in this course `tools/preflight.py`.
+- **Hard stop** — a timer started first on every rented box (`sleep Nh; <provider stop command>`) that stops billing after a fixed time even if everything else fails.
+- **On-demand vs spot vs reserved** — pay-per-second capacity you keep until you release it; cheaper capacity the provider can take back at short notice; discounted capacity bought for weeks or months in advance.
+- **Loss spike** — a sudden rise of the training loss; normal if it recovers within a few hundred steps, a divergence if it does not.
+- **Rollback** — resuming from a checkpoint taken before a divergence, with diverged checkpoints moved aside so that auto-resume cannot pick them up.
+- **skip_batches** — `mygpt.train` override that, on resume, advances the data loader past N global batches, to step over the data that triggered a spike (as PaLM did).
+- **Straggler** — the slowest GPU in a data-parallel job; every step waits for it, so one throttled GPU slows the whole node.
+- **NCCL hang** — a collective operation (e.g. all-reduce) that never completes because one rank died or is stuck; the job stops logging while the GPUs may still show 100% utilization.
+- **Xid error** — an error code the NVIDIA driver writes to the kernel log; codes such as 79 (GPU fell off the bus) or 48 (double-bit ECC) mean faulty hardware.
+- **Run log** — the dated record of a long run (`reports/main-run-log.md`): launch facts, check-ins, incidents with decisions and commits, and the close-out with the real cost.
+- **WSD cooldown** — the final decay phase of a warmup-stable-decay schedule, in which the loss drops visibly; shortening a run means moving the cooldown earlier by lowering `train_tokens` before it starts.

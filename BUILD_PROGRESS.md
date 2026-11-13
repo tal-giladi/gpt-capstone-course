@@ -20,7 +20,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Module 4 — GPUs: pick, rent, benchmark
 - [x] Module 5 — Baseline: reproduce GPT-2 124M
 - [x] Module 6 — Make it yours: ablations
-- [ ] Module 7 — The main run
+- [x] Module 7 — The main run
 - [ ] Module 8 — Evaluate honestly
 - [x] Module 9 — Instruction tuning (SFT)
 - [x] Module 10 — Preference tuning (DPO)

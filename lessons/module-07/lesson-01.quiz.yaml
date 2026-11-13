@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    A provider offers 8×H100 spot capacity at 45% below on-demand for your ~5 hour main run. Your
+    checkpoints go to the bucket every 1,000 steps (~7 minutes). Why does the lesson still recommend
+    on-demand?
+  options:
+    - Spot nodes run on older H100 PCIe cards, so the run would be slower and cost about the same.
+    - Each reclaim costs lost steps plus restart time, and a replacement 8-GPU node may not exist.
+    - Spot pricing is billed per hour instead of per second, which removes most of the saving.
+    - Checkpoints written on a spot node cannot be resumed on an on-demand node of another type.
+  correct: 1
+  explanation: >-
+    Checkpoints make an interruption survivable, not free: you lose up to an interval of steps, pay for
+    setup again, and can be left waiting with no 8-GPU node at all. For a one-off 5-hour job the saving
+    rarely survives two interruptions.
+- id: q2
+  question: >-
+    `preflight.py` prints `WARN bucket r2:mygpt/ckpt/main_350m already has 3 checkpoint(s)` on a fresh
+    node. You remember an aborted launch last week with a wrong learning rate. What do you do?
+  options:
+    - Launch anyway; the new run starts at step 0 because the node's out_dir is empty.
+    - Delete the whole bucket prefix with `rclone purge` so the run starts cleanly.
+    - Launch, then stop it after the first checkpoint so the new files replace the old ones.
+    - Give the run a new run_name, out_dir and ckpt_remote in a commit, then launch.
+  correct: 3
+  explanation: >-
+    With an empty out_dir, mygpt.train pulls the newest checkpoint from ckpt_remote and resumes it, so the
+    aborted run's weights would be continued. A new name in a commit avoids that without deleting anything
+    you might still want to inspect.
+- id: q3
+  question: >-
+    Ten minutes in, the watcher shows 1.02M tokens/s for the node. Your 04.3 benchmark gave 175,000
+    tokens/s per GPU and 05.3 measured scaling efficiency 0.93. What is the right move?
+  options:
+    - Keep going; the first hour always runs slower until torch.compile has finished its caches.
+    - Keep going but raise micro_batch_size on resume so each GPU does more work per step.
+    - Stop, find the slow part (clocks, a busy GPU, settings vs your benchmark) or redeploy.
+    - Lower eval_every on resume, because evaluation is what pulls the average speed down.
+  correct: 2
+  explanation: >-
+    The expected speed is 8 × 175,000 × 0.93 ≈ 1.30M tokens/s, so 1.02M is about 78%, which turns a
+    5.3-hour run into almost 7. Compile finishes in the first minute or two; finding the cause now
+    costs a few dollars, paying for it all run costs about $40.
+- id: q4
+  question: >-
+    Your phone gets ntfy alerts from `watch_run.py` on the node. What extra alert covers the case where
+    the node itself dies in the night?
+  options:
+    - W&B's run crashed email, which fires when the run stops sending heartbeats.
+    - A second watch_run.py in another tmux window on the same node, as a backup.
+    - The autoshutdown.sh log, which records why the GPUs went idle before stopping.
+    - The hard stop, which messages you when it fires at twice the predicted time.
+  correct: 0
+  explanation: >-
+    Everything on the node goes silent with the node. W&B notices missing heartbeats from outside and
+    marks the run crashed, which can email you; the hard stop and the idle guard only stop billing.
