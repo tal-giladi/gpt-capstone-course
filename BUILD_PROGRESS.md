@@ -18,8 +18,8 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Module 2 — Data: find it, license it, store it
 - [x] Module 3 — Your tokenizer and token shards
 - [x] Module 4 — GPUs: pick, rent, benchmark
-- [ ] Module 5 — Baseline: reproduce GPT-2 124M
-- [ ] Module 6 — Make it yours: ablations
+- [x] Module 5 — Baseline: reproduce GPT-2 124M
+- [x] Module 6 — Make it yours: ablations
 - [ ] Module 7 — The main run
 - [ ] Module 8 — Evaluate honestly
 - [ ] Module 9 — Instruction tuning (SFT)
@@ -28,7 +28,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
-- Agent D: Module 5, then Module 6
+- Agent F: labs/common fixes from code-requests 05 and 06
 - Agent E: Module 9, then Module 10
 
 ## Decisions

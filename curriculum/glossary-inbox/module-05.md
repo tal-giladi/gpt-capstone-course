@@ -1,0 +1,10 @@
+- **torchrun** — PyTorch's launcher that starts one training process per GPU and sets RANK, LOCAL_RANK and WORLD_SIZE; `--standalone` runs everything on one node.
+- **DDP (DistributedDataParallel)** — data parallelism where every GPU holds a full model copy, processes different data and all-reduces gradients before each optimizer step.
+- **Gradient accumulation** — summing gradients over several micro-batches before one optimizer step, so the effective batch stays fixed when fewer or smaller GPUs are used.
+- **Scaling efficiency** — multi-GPU throughput divided by (number of GPUs × single-GPU throughput); 0.85–1.0 is healthy on an 8×H100 SXM node.
+- **Checkpoint interval** — how many optimizer steps pass between checkpoints (`ckpt_every`); a failure loses on average half an interval.
+- **SIGTERM / SIGKILL** — the polite stop signal a program can catch (mygpt saves a checkpoint) and the forced one it cannot (resume from the last interval checkpoint).
+- **Auto-resume** — mygpt.train's behaviour of continuing from the newest checkpoint in out_dir (or pulled from the bucket), restoring weights, optimizer, data position and RNG.
+- **HellaSwag acc_norm** — accuracy on HellaSwag's four-ending completion task when the ending with the lowest average per-token loss is chosen; chance is 0.25.
+- **Bits per byte (bpb)** — validation loss converted to bits per byte of raw text, loss / ln 2 × tokens / bytes; comparable across tokenizers.
+- **Xid error** — an NVIDIA driver error code in the kernel log (`dmesg`) that signals a GPU hardware or driver fault.

@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    You rehearse `baseline_124m.yaml` on 2×RTX 4090 with `train.micro_batch_size=16`. How does this
+    run relate to the real 8×H100 run with micro-batch 64?
+  options:
+    - It uses a 4× smaller batch per step, so its loss curve will be noisier but otherwise comparable.
+    - It accumulates 16 micro-batches, so each step sees the same 524,288 tokens and update.
+    - It needs a 4× lower learning rate, because each GPU now sees fewer sequences per forward pass.
+    - It runs 4× more optimizer steps for the same tokens, so the warmup must be lengthened to match.
+  correct: 1
+  explanation: >-
+    Gradient accumulation is derived from total_batch_tokens / (micro × seq_len × GPUs) = 16, so each
+    optimizer step still averages gradients over 2^19 tokens. Steps, LR schedule and loss curve are the
+    same; only time per step differs.
+- id: q2
+  question: >-
+    For the baseline you find an 8×H100 PCIe server at $2.50 per GPU-hour and an 8×H100 SXM node at
+    $4.39 per GPU-hour. What is the main reason the lesson still recommends the SXM node?
+  options:
+    - PCIe cards cannot run bf16 autocast, so the run would fall back to slower fp32 matmuls.
+    - PCIe servers are always interruptible, so the run could be taken away before it finishes.
+    - The SXM node uses a newer CUDA driver, which the PyTorch 13.0 wheels strictly require.
+    - "Each step all-reduces ~0.5 GB of gradients: fast over NVLink, slow over PCIe."
+  correct: 3
+  explanation: >-
+    On an HGX board all eight GPUs share NVLink, so the gradient all-reduce costs milliseconds. Over PCIe
+    it eats a visible part of each step, and PCIe cards also have a lower dense peak, so the cheaper hourly
+    price can turn into a higher price per token.
+- id: q3
+  question: >-
+    Your first 2-GPU launch crashes at step 50 with a JSON decode error while loading HellaSwag; the
+    single-GPU smoke test never had this problem. What is the most likely cause and fix?
+  options:
+    - Both processes wrote the same file at once; download it before `torchrun`, then relaunch.
+    - The GPT-2 tokenizer cannot encode HellaSwag; switch `hellaswag_every` to 0 for the baseline run.
+    - The 4090s ran out of memory during evaluation; lower `micro_batch_size` and start a new out_dir.
+    - The checkpoint at step 50 was corrupted; delete `runs/rehearsal` and start the rehearsal again.
+  correct: 0
+  explanation: >-
+    Under torchrun every rank calls the loader, so two processes can write the same cache file
+    concurrently and one reads a half-written file. Pre-downloading removes the race, and the relaunch
+    resumes from the step-50 checkpoint.
+- id: q4
+  question: >-
+    A friend says `vocab_size: 50304` makes your baseline "not GPT-2", because GPT-2 has 50,257 tokens.
+    What is the accurate answer?
+  options:
+    - He is right; the extra rows change the softmax, so the run must use 50,257 for a fair comparison.
+    - The padding is for the tokenizer's special tokens, which GPT-2 adds during fine-tuning anyway.
+    - The 47 padding rows are never targets and get pushed down; it only makes matmuls faster.
+    - The padding adds capacity that slightly helps the model, which is why llm.c and nanoGPT use it.
+  correct: 2
+  explanation: >-
+    Real tokens never map to ids above 50,256, so training learns to give the padded rows near-zero
+    probability. Rounding to a multiple of 128 only makes the embedding and output matmuls more efficient.

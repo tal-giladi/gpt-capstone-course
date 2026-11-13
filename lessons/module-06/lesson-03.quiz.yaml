@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    Muon at 0.02 beats your AdamW control (lr 6e-4) by 0.030 bpb. Your AdamW run at lr 1.2e-3 is itself
+    0.022 better than the control. Threshold 0.004. What do you report?
+  options:
+    - Muon is 0.030 better than AdamW, since the control is the reference for every ablation.
+    - Muon is only 0.008 better than the best AdamW, which is still beyond the threshold.
+    - Muon and AdamW are tied, since the LR sweep shows that every difference is within noise.
+    - AdamW wins, since its better LR was found with fewer runs than Muon's LR sweep needed.
+  correct: 1
+  explanation: >-
+    An optimizer must be compared with the best-tuned opponent, otherwise you measure a weak baseline (the
+    main point of Wen et al.). 0.030 - 0.022 = 0.008 is still above 0.004, so Muon wins, by less than it
+    first appeared.
+- id: q2
+  question: >-
+    Your first Muon run's loss falls normally for 150 steps, then stalls and slowly rises while the
+    AdamW control keeps improving. Its config shows `weight_decay: 0.1`. What is happening?
+  options:
+    - Muon needs a longer warmup than AdamW, so the run should be restarted with 2× warmup.
+    - The Newton–Schulz step is unstable in bf16, so the run should switch to fp32 for Muon.
+    - The run hit a bad data shard, so it should be resumed from the step-100 checkpoint.
+    - Decay scales with Muon's LR of 0.02 and shrinks the blocks; use weight_decay 0.0.
+  correct: 3
+  explanation: >-
+    In this implementation decay is lr × wd per step, so 0.02 × 0.1 removes 0.2% of every block weight
+    each step, about 30× AdamW's rate. The project's Muon recipe uses weight_decay 0.0.
+- id: q3
+  question: >-
+    At step 1,200 your WSD run is 0.04 bpb behind the cosine control; at step 1,907 it is 0.002 ahead,
+    inside the noise. Which schedule goes into the main run?
+  options:
+    - WSD, because it ties at the end and lets you shorten or extend the stable phase.
+    - Cosine, because WSD was clearly worse for most of the run and only caught up by chance.
+    - Cosine, because the final values are within noise and cosine is the GPT-2 default.
+    - Neither; rerun both with three seeds, since the mid-run gap makes the result unreliable.
+  correct: 0
+  explanation: >-
+    WSD is expected to trail until its decay; the end-of-schedule comparison ties, matching Hägele et al.
+    With equal loss, its flexibility (stop or extend before decaying, branch decays from a checkpoint)
+    decides.
+- id: q4
+  question: >-
+    A blog post reports Muon training a 124M model "2× faster than AdamW". Your 1B-token ablations show a
+    small but real gain. What should you expect for the 350M main run?
+  options:
+    - A larger gain, because Muon's advantage grows with the number of parameters it orthogonalises.
+    - Exactly 2×, because the speedup is a property of the optimizer and not of the model size.
+    - A gain that is probably smaller than at 110M, in line with independent benchmarks.
+    - No gain, because Muon only works with the tiny models of the NanoGPT speedrun.
+  correct: 2
+  explanation: >-
+    Wen et al. found 1.3–1.4× over tuned AdamW below 1B parameters, shrinking to about 1.1× at 1.2B, and
+    many 2× claims come from weak baselines. Moonlight shows Muon works at much larger scale, so "no gain"
+    is too strong.

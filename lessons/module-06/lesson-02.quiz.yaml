@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    `abl_rope` is the best single run, 0.012 bpb better than the control with a 0.004 threshold. You want
+    a main model that is GPT-2 plus RoPE and nothing else. What happens?
+  options:
+    - It trains fine, but `export_hf` refuses it as an ablation-only combination.
+    - It exports as a GPT-2 model, because Hugging Face's GPT2 class has a rotary option you can enable.
+    - It exports as a Llama model, because RoPE is the one setting that defines the Llama architecture.
+    - It fails to train, because RoPE needs RMSNorm to keep attention logits in range during warmup.
+  correct: 0
+  explanation: >-
+    Only all-GPT-2 settings, the Llama bundle and the Qwen3 bundle map to standard classes. RoPE's gain is
+    evidence for choosing a bundle that contains it, not a final architecture on its own.
+- id: q2
+  question: >-
+    `abl_untied` is 0.006 bpb better than the control (threshold 0.004), and its log shows MFU 20% higher
+    than the control at the same tokens/s. How do you read this?
+  options:
+    - The run is genuinely faster, so untying should be adopted for speed as well as loss.
+    - The higher MFU means the untied model used the GPU better, so the loss gain is partly a speed effect.
+    - The MFU is inflated because 6 × parameters counts the input table as matmul work; speed is equal.
+    - The MFU difference shows a measurement error, so the whole run should be discarded and repeated.
+  correct: 2
+  explanation: >-
+    The untied run has 25M more parameters but no extra matmul, so the 6N-based MFU overstates it; compare
+    tokens/s. The loss gain is real at matched tokens but costs parameters, about +10% at 350M.
+- id: q3
+  question: >-
+    Both bundles beat the control beyond the threshold; `abl_qwen3` and `abl_llama` are 0.001 bpb apart,
+    well inside the noise. Which choice does the lesson recommend and why?
+  options:
+    - Llama, because it has fewer normalisation layers and therefore always trains faster per token.
+    - Qwen3, because QK-norm adds LR headroom and stability for a long run at no loss cost.
+    - Neither; with a tie you must keep the GPT-2 architecture until a third seed breaks it.
+    - Llama, because Qwen3ForCausalLM cannot be evaluated with lm-eval-harness or served on the Hub.
+  correct: 1
+  explanation: >-
+    When two exportable options tie on loss, prefer the one with a known benefit elsewhere: QK-norm widens
+    the range of stable learning rates (Wortsman et al.) and is why Qwen3 added it. Both export to standard
+    Hugging Face classes.
+- id: q4
+  question: >-
+    `abl_swiglu` ends at exactly the same val bpb as `abl_control_s1337`, to four decimals. What do you
+    check first?
+  options:
+    - Nothing; SwiGLU has the same parameter count, so an identical loss is the expected outcome.
+    - The seed, because SwiGLU runs must use a different seed than the control to be independent.
+    - The val split, because SwiGLU changes the tokenizer's output and therefore the val bytes.
+    - The run's header and command, because the override probably did not apply at all.
+  correct: 3
+  explanation: >-
+    Two different architectures do not end at the same loss to four decimals; the run was most likely the
+    control again (commented line, typo). The command printed by the queue and the header show it.

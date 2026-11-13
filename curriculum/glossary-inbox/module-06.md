@@ -1,0 +1,15 @@
+- **Ablation** — a training run that changes exactly one setting against a control run, everything else identical, to measure that setting's effect.
+- **Control run** — the unchanged reference configuration of an ablation study (`configs/ablation_base.yaml`); run with two or more seeds to measure noise.
+- **Seed spread** — the difference in the final metric between control runs that differ only in the random seed; twice the spread is the course's decision threshold.
+- **Matched tokens** — comparing runs after the same number of training tokens (here at the end of the same schedule), not after the same wall-clock time.
+- **RoPE (rotary position embedding)** — encodes position by rotating query and key vectors by position-dependent angles inside attention, replacing a learned position table.
+- **RMSNorm** — normalisation that divides by the root mean square of the activations with a learned scale, without LayerNorm's mean subtraction and bias.
+- **SwiGLU** — gated MLP, down(SiLU(gate(x)) * up(x)); with hidden size 8/3·d it has the same parameters as a 4·d GELU MLP.
+- **QK-norm** — normalising queries and keys per head before the attention dot product; widens the range of stable learning rates (used in Qwen3).
+- **Tied embeddings** — using the input embedding matrix also as the output projection; untying adds vocab × width parameters but no matmul FLOPs.
+- **Export rule** — mygpt's constraint that the final model must be all-GPT-2 settings, the Llama bundle (RoPE, RMSNorm, SwiGLU, no bias) or the Qwen3 bundle (Llama + QK-norm), so it loads as a standard Hugging Face class.
+- **Muon** — optimizer for 2D weight matrices that orthogonalises the momentum update with Newton–Schulz iterations; embeddings, head and norms stay on AdamW.
+- **WSD schedule (warmup-stable-decay)** — linear warmup, a long constant-LR phase, then a short decay (here the last 20% of steps); ends about level with cosine and lets the run length be chosen late.
+- **Tokens per parameter** — training tokens divided by model parameters; about 20 is Chinchilla-optimal for compute, this course's main run uses about 59 (over-training).
+- **Over-training** — training a fixed-size model on more tokens than compute-optimal, trading training compute for a better small model that is cheaper to use.
+- **Decision record (ADR)** — a short dated document stating a decision, its context, evidence, rejected options and cost, committed next to the config it froze.

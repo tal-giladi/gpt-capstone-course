@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your 8-GPU node dies at step 7,640 of the baseline. You rent a new node, clone the repo and are
+    about to relaunch the same command. What do you do first?
+  options:
+    - Nothing extra; auto-resume pulls the newest checkpoint and the full log from the bucket.
+    - Start a new out_dir, because a checkpoint from another machine cannot be resumed safely.
+    - Copy the step-7,000 checkpoint into place and lower the LR, since the node died for a reason.
+    - Run `sync.sh pull-ckpt` for the run to bring back the checkpoint and the log.
+  correct: 3
+  explanation: >-
+    Auto-resume would pull only the checkpoint and start a fresh log.jsonl that later overwrites the
+    longer one in the bucket. Pulling checkpoint and log first keeps one continuous history; a dead node
+    is not a reason to change the training recipe.
+- id: q2
+  question: >-
+    You consider lowering `ckpt_every` from 1000 to 100 for the baseline, where 1000 steps take about
+    2.7 minutes of an 8×H100 node at $35/h. What does that change buy you?
+  options:
+    - About a dollar less lost work per failure, for 10× the save stalls and uploads.
+    - Protection against NaN losses, because the model is restored before the loss can diverge.
+    - A smoother loss curve, because every checkpoint also triggers a validation evaluation.
+    - Exact reproducibility, because checkpoints are the only source of the RNG state on resume.
+  correct: 0
+  explanation: >-
+    A random failure loses half an interval on average: about 1.3 minutes (~$0.80) at 1000 steps versus
+    8 seconds at 100. Each save stalls all GPUs for seconds and uploads ~1.5 GB, so the shorter interval
+    costs more than it saves.
+- id: q3
+  question: >-
+    After resuming from a checkpoint you notice the train loss is 0.15 higher than just before the
+    interruption and slowly comes back down. What is the most likely explanation?
+  options:
+    - This is normal GPU non-determinism; resumed runs always differ by about this much.
+    - Some state was not restored, such as the optimizer moments or the data position.
+    - The learning-rate warmup restarted from zero, which the schedule does after every resume.
+    - The validation set changed, because evaluation restarts from a different shard after resume.
+  correct: 1
+  explanation: >-
+    A correct resume restores weights, optimizer, step, loader position and RNG, so the curve continues
+    within ~0.01–0.02. A clear jump that decays looks like a fresh optimizer or repeated/skipped data,
+    for example when weights were loaded by hand into a new run.
+- id: q4
+  question: >-
+    Your run stops with "non-finite loss/grad at step 12,410 ... Last good checkpoint:
+    ckpt_00012000.pt". Grad norms had been climbing since step 11,800. What is the best next move?
+  options:
+    - Relaunch unchanged; NaNs are random and the run usually passes the same step the second time.
+    - Restart the whole run with a new seed, since the weights after step 11,800 are unusable now.
+    - Resume from ckpt_00011000.pt with a lower peak LR, moving newer checkpoints out of out_dir.
+    - Resume from ckpt_00012000.pt with gradient clipping turned off so the large updates can pass.
+  correct: 2
+  explanation: >-
+    Trouble started before step 12,000, so roll back to a checkpoint from before the gradient norms rose
+    and continue with a lower LR. The same data and RNG would reproduce the blow-up if nothing changes,
+    and removing clipping makes it worse.

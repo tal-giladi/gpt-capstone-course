@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    Your 04.3 benchmark gave 500,000 tokens/s per GPU for the baseline config. Ten minutes into the
+    8×H100 run, `run_summary.py` reports 2.9M tokens/s for the node. What do you do?
+  options:
+    - Keep going; 2.9M is 8 × 500,000 minus the usual DDP overhead of about a quarter.
+    - Keep going but lower `eval_every`, since evaluation is what slows the node down.
+    - Stop the run and switch to micro-batch 32, because 64 is too large for eight GPUs.
+    - Stop and check all eight GPUs and the NVLink topology; 0.73 is too low.
+  correct: 3
+  explanation: >-
+    2.9M / (8 × 500,000) = 0.73, well below the 0.85–1.0 an all-NVLink node should give. A throttled or
+    busy GPU or a PCIe-only node is the usual cause, and finding it in minute ten saves most of an hour
+    of overpriced training.
+- id: q2
+  question: >-
+    Your baseline finishes with HellaSwag acc_norm 0.2911. OpenAI's GPT-2 124M scores 0.2945 with the same
+    evaluation. How should you report it?
+  options:
+    - As matching GPT-2, since the gap is within the evaluation's noise of about ±0.01.
+    - As a failed reproduction, since anything below the reference means the recipe is broken.
+    - As beating GPT-2, since your model saw only 10B tokens and is therefore more efficient.
+    - As inconclusive until you rerun the whole baseline with three seeds to get error bars.
+  correct: 0
+  explanation: >-
+    With 10,042 examples the standard error is about 0.0046, so a 0.0034 difference is noise; the run
+    reproduces GPT-2. Rerunning a $50 baseline three times is not needed to state that.
+- id: q3
+  question: >-
+    At step 1,500 the loss has been flat at about 7.4 for several hundred steps while the learning rate and
+    gradient norm look normal. What is the most likely problem?
+  options:
+    - The warmup was too short, so the model is stuck in a bad region and needs a restart.
+    - The shards do not match the model, e.g. tokens from another tokenizer.
+    - HellaSwag evaluation is interfering with training and should be switched off.
+    - The batch is too large for 124M parameters, so each step averages away the learning signal.
+  correct: 1
+  explanation: >-
+    A correct GPT-2 run is near 4 by step 1,000. Flat loss around 7 with healthy optimizer signals points
+    to data that the model cannot predict with this vocabulary, such as shards from the wrong tokenizer;
+    check meta.json first.
+- id: q4
+  question: >-
+    The run has ended and printed its final metrics. In which order do you finish?
+  options:
+    - Terminate the node to stop billing, then pull the checkpoint from the bucket to verify it.
+    - Copy the checkpoint to your laptop over SSH, terminate, then upload it to the bucket.
+    - Check the final checkpoint's size in the bucket, copy results off, then terminate.
+    - Stop the pod rather than terminate it, so the local disk keeps a copy for the next module.
+  correct: 2
+  explanation: >-
+    Terminating deletes the node's disk, so the checkpoint and log must first be confirmed in the bucket.
+    A stopped pod keeps billing for its volume and invites forgetting it; the bucket is the durable copy.

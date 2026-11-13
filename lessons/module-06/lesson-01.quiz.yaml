@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    Your RoPE run used `train.micro_batch_size=32` (accumulation 16) because you had rented an H100 PCIe,
+    while the control used 64 (accumulation 8) on an H100 SXM. Is the comparison still fair?
+  options:
+    - No; a different micro-batch changes the gradient noise, so the RoPE run must be repeated.
+    - No; the GPU type changes bf16 rounding enough that runs on two GPU types never compare.
+    - Yes; the total batch, token order and schedule are identical, only the speed differs.
+    - Yes, but only if you compare the two runs at the same wall-clock time rather than at the end.
+  correct: 2
+  explanation: >-
+    Accumulation keeps every optimizer step at 524,288 tokens in the same order, so the runs learn the
+    same way; micro-batch and hardware change time per step. That is also why comparisons are made at
+    matched tokens, not matched time.
+- id: q2
+  question: >-
+    Your two control seeds end at 1.1214 and 1.1238 val bpb. A SwiGLU run ends at 1.1197. What does the
+    course's rule say?
+  options:
+    - Better, because 1.1197 is below both control runs.
+    - Within noise, because 0.0029 below the mean is less than twice the 0.0024 spread.
+    - Worse, because a gain smaller than the spread means SwiGLU slowed training down.
+    - Better, because any improvement over the control mean counts at a fixed token budget.
+  correct: 1
+  explanation: >-
+    The control mean is 1.1226, so the delta is -0.0029; the threshold is 2 × 0.0024 = 0.0048. The run is
+    within noise: it may be a real small gain, but this evidence does not show it.
+- id: q3
+  question: >-
+    Halfway through, a WSD-schedule run is 0.03 bpb worse than the cosine control at the same step. You
+    are short on budget. What should you do?
+  options:
+    - Let it finish and compare at step 1,907; WSD catches up in its final decay phase.
+    - Stop it now and record WSD as worse, since a 0.03 gap is ten times the seed spread.
+    - Stop it and rerun with a higher learning rate, since WSD clearly needs a different LR.
+    - Compare the two runs at matched wall-clock time instead, which removes the schedule effect.
+  correct: 0
+  explanation: >-
+    WSD keeps the LR high until the last 20% of steps, so it is expected to trail cosine until the decay.
+    Rankings can flip during decay, which is why the table only compares final evaluations.
+- id: q4
+  question: >-
+    You plan 21 ablation runs. Your 04.3 benchmark gave 400,000 tokens/s for `ablation_base` on a $2.69/h
+    H100. About how much do the training runs cost, before setup and idle time?
+  options:
+    - About $16, because each 1B-token run takes about 20 minutes on the H100.
+    - About $60, because each run needs a full GPU-hour once evals are included.
+    - About $125, because each run is billed at the 8-GPU node price of the baseline.
+    - About $42, since each run takes ~42 min plus ~3 for compile and evals.
+  correct: 3
+  explanation: >-
+    1e9 / 400,000 = 2,500 s ≈ 42 min, plus ~3 min overhead ≈ 0.75 h ≈ $2.02 per run, so 21 runs cost
+    about $42. It still fits the $60 plan line, but with less margin than at 520,000 tokens/s.

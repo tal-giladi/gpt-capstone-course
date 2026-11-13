@@ -1,0 +1,122 @@
+- id: q1
+  question: >-
+    You want to finish the baseline faster and propose doubling `total_batch_tokens` to 1,048,576 while
+    keeping everything else. What changes besides speed?
+  options:
+    - Nothing; the batch size only affects throughput, never what the model learns from each token.
+    - Optimizer steps halve and warmup covers twice the share, so the loss curve differs.
+    - The run needs twice the GPU memory, so it cannot fit on 8×H100 at any micro-batch size.
+    - The tokenizer must be retrained, because sequences are packed differently at larger batches.
+  correct: 1
+  explanation: >-
+    With 10B tokens fixed, a doubled batch means 9,536 steps instead of 19,073, and the LR settings were
+    tuned for 0.5M-token batches. It is no longer the reference recipe; memory is unaffected because
+    accumulation absorbs the larger batch.
+- id: q2
+  question: >-
+    Which of these baseline settings comes from GPT-3 Small rather than from the GPT-2 paper itself?
+  options:
+    - The 12 layers, 12 heads and 768 hidden width of the transformer stack.
+    - The 1,024-token context and learned position embeddings.
+    - The tied input embedding and output projection matrix.
+    - The 6e-4 peak learning rate with a 375M-token linear warmup.
+  correct: 3
+  explanation: >-
+    GPT-2's paper fixes the architecture but not the small model's optimizer settings, so reproductions
+    take GPT-3 Small's 0.5M batch, 6e-4 peak LR, 375M-token warmup and cosine decay to 10%.
+- id: q3
+  question: >-
+    No 8×H100 SXM node is free on RunPod this evening. A Vast.ai host offers 8×H100 SXM at $2.80 per GPU
+    with good reliability. What must you set up differently there?
+  options:
+    - The R2 and W&B variables from your env file, and an autoshutdown stop command calling Vast's API.
+    - A smaller micro-batch, because Vast.ai hosts give each GPU less memory than RunPod does.
+    - A different config file, because the learning rate depends on which provider runs the GPUs.
+    - Nothing; RunPod secrets and `runpodctl` also work on other providers once you have logged in there.
+  correct: 0
+  explanation: >-
+    RunPod secrets and `runpodctl` exist only on RunPod. Elsewhere you load the variables yourself and give
+    the idle guard a stop command that actually ends billing; an OS shutdown does not on most providers.
+- id: q4
+  question: >-
+    Two hours into an 8-GPU run, the provider stops your pod without warning. Your out_dir had
+    checkpoints at steps 8,000 and 9,000; the run was at step 9,620. What do you lose?
+  options:
+    - Nothing, because the SIGTERM handler saved a checkpoint at step 9,620 before the stop.
+    - The whole run, because DDP checkpoints are only valid on the same number of GPUs.
+    - About 620 steps, since the step-9,000 checkpoint in the bucket is the resume point.
+    - About 1,620 steps, since the newest checkpoint is still uploading and must be skipped.
+  correct: 2
+  explanation: >-
+    A provider stop often arrives as SIGKILL, so plan on the last interval checkpoint, here step 9,000,
+    which was uploaded long ago. Checkpoints store the global data position and can even resume on a
+    different GPU count.
+- id: q5
+  question: >-
+    A run stopped with a NaN at step 14,210. You relaunch the same command without changes and it stops
+    again at step 14,210. What does that tell you?
+  options:
+    - The node is faulty, because a deterministic run cannot fail twice at the same step.
+    - The cause is reproducible from the checkpoint, data and RNG, so you must change something.
+    - The checkpoint is corrupted, so you must restart the run from step 0 with a new seed.
+    - The NaN check is too strict, so you should relax it and let the run continue past the step.
+  correct: 1
+  explanation: >-
+    Resume restores weights, optimizer, data position and RNG, so the same failure repeats. Roll back to a
+    checkpoint before the gradient norms rose and lower the LR; if it still fails at the same data
+    position, investigate the data.
+- id: q6
+  question: >-
+    On a fresh box after a crash you launch the run with an empty out_dir and `ckpt_remote` set. It
+    resumes correctly. What problem will show up later?
+  options:
+    - The run trains the remaining steps twice, because the loader position is not in the checkpoint.
+    - The model diverges, because the optimizer state is not part of the pulled checkpoint.
+    - W&B creates a second, unrelated run because the run name is regenerated on every box.
+    - The new log.jsonl starts at the resume step and later overwrites the longer one in the bucket.
+  correct: 3
+  explanation: >-
+    Auto-resume pulls only the newest checkpoint. Pulling the checkpoint and the log with `sync.sh
+    pull-ckpt` before relaunching keeps one continuous log; the checkpoint itself has optimizer and
+    loader state, and the W&B id is the run name.
+- id: q7
+  question: >-
+    Your final val loss is 3.07 on your own FineWeb-Edu validation split. Karpathy's notebook gives
+    OpenAI GPT-2 124M a val loss of 3.29 on his FineWeb-Edu split. What can you claim?
+  options:
+    - Your model is better than GPT-2 by 0.22 nats, since both numbers use FineWeb-Edu text.
+    - Your model is worse, because OpenAI's model was trained on many more tokens than yours.
+    - Only that it fits FineWeb-Edu well; a fair comparison needs both models on one split.
+    - The comparison is meaningless, because loss and HellaSwag never agree on model quality.
+  correct: 2
+  explanation: >-
+    Different validation splits give different absolute numbers, and GPT-2 was trained on other text, so
+    a lower FineWeb-Edu loss is expected. The fair claims are HellaSwag with the same method and, in Module
+    8, both models evaluated on the same data.
+- id: q8
+  question: >-
+    Before the baseline you consider skipping the 2-GPU rehearsal to save time and test everything on the
+    8×H100 node directly. Why does the lesson rehearse on a cheap box?
+  options:
+    - The 8-GPU launch path cannot be tested elsewhere, so the rehearsal only checks the data files.
+    - Setup bugs like NCCL, W&B keys or uploads cost cents to find there and dollars on the node.
+    - Cheap GPUs give the same tokens/s as H100s, so the rehearsal doubles as the speed benchmark.
+    - The rehearsal checkpoint is used as the starting point of the real baseline to save steps.
+  correct: 1
+  explanation: >-
+    torchrun, DDP, W&B, rclone uploads and HellaSwag work the same on 2 GPUs as on 8, so every setup bug
+    found at $0.68 per hour is one you do not pay $35 per hour to debug. Speed comes from 04.3, not the rehearsal.
+- id: q9
+  question: >-
+    Your run ended at 01:40. At 01:55 you have listed `ckpt_00019073.pt` and `log.jsonl` in the bucket
+    with matching sizes. The node's idle guard is set to 20 minutes. What do you do now?
+  options:
+    - Terminate the node yourself now, after copying the results file and console log off it.
+    - Let the idle guard stop it at about 02:00, since it was set up for exactly this situation.
+    - Keep it running for Module 6, because the ablations need the same 8-GPU environment.
+    - Stop the pod but keep it, so the disk can be reused for the main run in Module 7.
+  correct: 0
+  explanation: >-
+    The idle guard is a safety net, not the plan: it only stops the pod, and every minute until then
+    costs about 60 cents. Ablations run on one GPU, and the next 8-GPU run starts from a fresh node and
+    the bucket.

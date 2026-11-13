@@ -1,0 +1,121 @@
+- id: q1
+  question: >-
+    To save money you run the QK-norm ablation for 0.5B tokens instead of 1B and compare its final val
+    bpb with the control's value at step 954. What is wrong with this?
+  options:
+    - Nothing; at matched tokens the comparison is fair, so the shorter run is simply cheaper.
+    - The val split differs at step 954, because evaluation advances through the shards over time.
+    - The runs were at different points of different LR schedules, so they do not compare.
+    - QK-norm needs at least 1B tokens to have any effect, so the run measures nothing at all.
+  correct: 2
+  explanation: >-
+    The 0.5B run had decayed its LR to the end of its cosine, while the control at step 954 was mid-schedule
+    at a high LR. Schedule position changes the loss, so both runs need the same token budget and schedule.
+- id: q2
+  question: >-
+    Your two control seeds differ by 0.019 bpb, while the speedrun reports run-to-run noise around a
+    tenth of that. What do you do before running more ablations?
+  options:
+    - Find what differed between the two controls, such as data, a resume or a setting.
+    - Accept it and use 0.038 as the threshold, since every setup has its own level of noise.
+    - Add three more control seeds, since five runs will average the noise down to a usable level.
+    - Switch the metric from val_bpb to val_loss, since bits per byte amplifies small differences.
+  correct: 0
+  explanation: >-
+    Seed noise at this scale is a few thousandths of a bpb; 0.019 suggests the runs were not identical,
+    for example a missing shard that made one run wrap around. Fixing the setup is cheaper than a threshold
+    so wide that no ablation can pass it.
+- id: q3
+  question: >-
+    Single-change runs show RoPE and SwiGLU better beyond the threshold, RMSNorm and no-bias within noise.
+    The Qwen3 bundle is better than the control beyond the threshold. Why not ship only RoPE + SwiGLU?
+  options:
+    - RoPE and SwiGLU interact badly unless RMSNorm keeps the activations small enough to train.
+    - RMSNorm and no-bias are required to fit the 350M model in 80 GB with a micro-batch of 32.
+    - The neutral changes improve HellaSwag even when val bpb does not move, so they are needed.
+    - That mix cannot be exported; the bundle has the gains and its neutral parts cost nothing.
+  correct: 3
+  explanation: >-
+    Only the full Llama or Qwen3 bundle maps to a standard Hugging Face class. RMSNorm and no-bias are
+    within noise, so including them costs no measurable loss, and the bundle itself was measured to win.
+- id: q4
+  question: >-
+    A paper claims its new optimizer is "2× faster than AdamW" on a 124M model. The paper's AdamW used
+    lr 3e-4 with no sweep. How much weight do you give the claim before testing it?
+  options:
+    - Full weight, since a published 2× speedup at 124M is exactly the scale of your ablations.
+    - Little, since an untuned AdamW is a weak baseline and inflates such speedups.
+    - None, since optimizer results never transfer between codebases and must be ignored.
+    - Full weight only for 350M, since speedups grow with model size as optimizers matter more.
+  correct: 1
+  explanation: >-
+    Wen et al. found that many 2× claims shrink to at most ~1.4× against a properly tuned AdamW at small
+    scale and ~1.1× at 1.2B. Treat it as a hypothesis for your own test with a tuned baseline.
+- id: q5
+  question: >-
+    Your best Muon run is 0.009 bpb better than the best-tuned AdamW (threshold 0.005). Your best Muon LR
+    was 0.04, the top of the range you tried. What goes into the recipe?
+  options:
+    - AdamW, because a best LR at the edge of the range makes the Muon result unreliable.
+    - Muon at 0.08, because the optimum is clearly above the tested range and should be extrapolated.
+    - Muon at 0.04, noting that the optimum may be higher and that the 350M LR is untested.
+    - Neither; run a full Muon sweep from 0.01 to 0.16 before deciding anything about the optimizer.
+  correct: 2
+  explanation: >-
+    Muon won beyond the threshold even if its LR was not fully tuned, so the decision stands; record the
+    open question instead of extrapolating an untested LR into a $180 run. The optional 350M check is the
+    place to test a higher value.
+- id: q6
+  question: >-
+    A friend argues for cosine because "WSD was behind for 80% of every run". Your WSD and cosine runs
+    end within noise. Which argument for WSD is correct?
+  options:
+    - It equals cosine at the end and lets the main run stop or extend before its decay phase.
+    - It always beats cosine at the end because the stable phase explores the loss surface more widely.
+    - It needs fewer evaluations, because the loss is constant during the stable phase.
+    - It allows a higher peak LR than cosine, which is what made the final numbers equal.
+  correct: 0
+  explanation: >-
+    WSD trails until its decay and catches up, as Hägele et al. report. With equal final loss, being able to
+    choose the length late (or branch a decay from a stable checkpoint) is the practical advantage.
+- id: q7
+  question: >-
+    The frozen config has 337M parameters. Untying the embeddings was 0.004 bpb better at 124M with a
+    0.005 threshold. Should the main run be untied?
+  options:
+    - Yes, because untying is standard in large models and the gain was positive.
+    - Yes, because untying adds no FLOPs, so the extra parameters are free.
+    - No, because untied models cannot be exported to Llama or Qwen3 classes.
+    - No, because the gain was within noise and it adds ~34M parameters at 350M.
+  correct: 3
+  explanation: >-
+    0.004 is below the threshold, so the data does not show a gain, while the extra 32,768 × 1,024 matrix
+    costs memory in SFT and DPO and a larger download. Untied models do export; FLOPs are unchanged but
+    parameters are not free.
+- id: q8
+  question: >-
+    Your token report shows 19.4B train tokens in `tok/bpe32k-100BT-30`, but the template says
+    `train_tokens: 20_000_000_000`. What do you set?
+  options:
+    - Keep 20B; repeating 0.6B tokens at the end of a 20B run makes no measurable difference.
+    - About 18.8B, about 97% of what is there, so the run stays within one epoch of the data.
+    - 40B, two full epochs, since repeated data is as good as new data for a model this size.
+    - Tokenize more data on the 8×H100 node at the start of the main run to reach exactly 20B.
+  correct: 1
+  explanation: >-
+    The lesson's rule is one epoch without repeats, with a small margin so the loader never wraps. Doing
+    data preparation on a $35/h GPU node wastes money, and a second epoch is a different experiment.
+- id: q9
+  question: >-
+    The morning of the main run you notice that the frozen config still has `ckpt_remote: ""`. What is
+    the right way to fix it?
+  options:
+    - Pass `train.ckpt_remote=...` on the torchrun command line and keep the frozen config as it is.
+    - Edit the config on the node, start the run, and update the repo afterwards from the node.
+    - Start without it; the node's local disk keeps three checkpoints, which is enough for one run.
+    - Fix it in the repo, commit, tag a new recipe version, and launch from that commit.
+  correct: 3
+  explanation: >-
+    The frozen config is the record of what you paid for, so every change goes through a commit and tag.
+    Without ckpt_remote a dead node loses the whole run; a command-line override works but leaves the
+    record wrong.

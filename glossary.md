@@ -4,6 +4,8 @@ Terms used across the capstone, in alphabetical order.
 
 - **13-gram overlap** — contamination test used since GPT-3: an item is flagged if any 13-token window of it occurs in the training data.
 - **6ND** — approximate training compute of a dense transformer: 6 FLOPs per parameter per training token (2 forward, 4 backward), plus a few percent for attention.
+- **Ablation** — a training run that changes exactly one setting against a control run, everything else identical, to measure that setting's effect.
+- **Assistant-only loss** — computing the SFT loss only on assistant tokens (and the end-of-turn token), marked by `{% generation %}` in the chat template; user and system text are context only.
 - **Auto-resume** — the trainer's behaviour of continuing from the latest checkpoint in `out_dir` (model, optimizer, step, data position, RNG) instead of starting over.
 - **Backblaze B2** — S3-compatible object storage at $6.95/TB-month with free egress up to 3× stored data (checked 2026-11-13).
 - **Benchmark contamination** — benchmark items (or most of their text) present in the training data, which lets a model recall instead of reason and inflates scores.
@@ -13,65 +15,96 @@ Terms used across the capstone, in alphabetical order.
 - **budget.md** — the learner's budget file at the root of the project repo: the $500 plan, spending rules, kill checklist, accounts/alerts table and the ledger `| date | lesson | item | estimate | actual |`.
 - **Byte-level BPE** — byte-pair encoding over the 256 byte values, so any UTF-8 text round-trips losslessly with no unknown tokens; GPT-2's tokenizer and this course's 32k tokenizer are byte-level BPEs.
 - **Bytes per token** — UTF-8 bytes of text divided by tokens produced; the tokenizer's compression. GPT-2 gets ~4.5–4.6 on FineWeb-Edu.
+- **Chat template** — the Jinja template stored with the tokenizer that turns a list of messages into one training or prompt string; this course's template uses plain-text `<|user|>` / `<|assistant|>` tags and ends each answer with `<|endoftext|>`.
+- **Checkpoint interval** — how many optimizer steps pass between checkpoints (`ckpt_every`); a failure loses on average half an interval.
 - **Cloudflare R2** — S3-compatible object storage with no egress fees ($0.015/GB-month Standard, checked 2026-11-13).
 - **Common Crawl Terms of Use** — terms attached to all Common Crawl-derived corpora, accepted in addition to the dataset's own license.
 - **Common validation set** — main-run validation documents that do not occur in sample-10BT, tokenized with both tokenizers (`tok/common-val-gpt2/`, `tok/common-val-bpe32k/`) for comparing the baseline and the main model on identical held-out text.
 - **Community cloud / marketplace** — GPUs hosted by smaller third parties (RunPod Community, Vast.ai); cheaper, with more variation in host quality.
 - **Container disk vs volume disk (RunPod)** — container disk is erased when a pod stops and is not billed while stopped; volume disk survives a stop and bills $0.20/GB-month while stopped.
 - **Contingency** — the part of the budget (~35%, ~$130 here) held back for crashed runs, idle boxes and price changes.
+- **Control run** — the unchanged reference configuration of an ablation study (`configs/ablation_base.yaml`); run with two or more seeds to measure noise.
 - **CUDA driver compatibility** — PyTorch wheels built for CUDA 13.x need NVIDIA driver 580 or newer; an older driver means no usable GPU.
 - **Data card** — a short document stating a dataset's source, license, size, revision, known properties and risks; cited by the model card.
 - **Dataset revision** — the git commit sha of a Hugging Face dataset repo; pinning it makes a download reproducible.
+- **DDP (DistributedDataParallel)** — data parallelism where every GPU holds a full model copy, processes different data and all-reduces gradients before each optimizer step.
+- **Decision record (ADR)** — a short dated document stating a decision, its context, evidence, rejected options and cost, committed next to the config it froze.
 - **Decontamination** — removing training documents that overlap evaluation benchmarks (here by `decontam.py` plus `filter_shards.py`) and reporting what was removed.
 - **Dense vs sparse FLOPs** — vendors headline tensor-core throughput "with sparsity" (2:4 structured), twice the dense figure that training actually uses.
 - **Dollars per billion tokens** — price per GPU-hour × 10^9 / (3600 × tokens/s per GPU × scaling efficiency); the number to compare GPUs and providers by.
 - **Egress** — data transferred out of a provider's network; often billed per GB, free on Cloudflare R2.
 - **encode_special_tokens** — Hugging Face `tokenizers` setting; when true, special-token strings found inside input text are encoded as ordinary text instead of as the special id.
 - **End-of-text token (EOT)** — `<|endoftext|>`, written before every document in the shards and used to end answers in SFT; id 50256 for GPT-2, id 0 for the course tokenizer.
+- **Export rule** — mygpt's constraint that the final model must be all-GPT-2 settings, the Llama bundle (RoPE, RMSNorm, SwiGLU, no bias) or the Qwen3 bundle (Llama + QK-norm), so it loads as a standard Hugging Face class.
 - **Fine-grained token** — a Hugging Face access token limited to chosen permissions and repositories, as opposed to classic read or write tokens.
 - **FineWeb-Edu** — Hugging Face's English web corpus (1.3T GPT-2 tokens) filtered from FineWeb by a classifier trained on Llama-3-70B-Instruct educational-value ratings; keeps pages with rounded score >= 3. ODC-By license.
+- **Generation prompt** — the text appended after the last user turn at inference (`<|assistant|>\n`) so the model continues with an answer.
+- **Gradient accumulation** — summing gradients over several micro-batches before one optimizer step, so the effective batch stays fixed when fewer or smaller GPUs are used.
 - **H100 PCIe / NVL** — H100 as a PCIe card (350-400 W, lower clocks; NVL: 94 GB, 835 TFLOP/s dense BF16); usually no NVLink to all other GPUs in the server.
 - **H100 SXM** — the socketed H100 module used on 8-GPU HGX boards: up to 700 W, 80 GB HBM3 at 3.35 TB/s, 900 GB/s NVLink, 989 TFLOP/s dense BF16.
 - **Hard stop** — a plain timer that stops the machine after a fixed time no matter what is running; the backstop behind an idle guard.
+- **HellaSwag acc_norm** — accuracy on HellaSwag's four-ending completion task when the ending with the lowest average per-token loss is chosen; chance is 0.25.
 - **HGX** — NVIDIA's 8-GPU baseboard where every GPU is connected to every other through NVLink switches.
 - **Idle guard** — a script that stops a GPU box after its GPUs have been idle for a set number of minutes (`scripts/autoshutdown.sh`).
 - **Idle guard (auto-shutdown)** — a script that polls GPU utilization and stops the machine after N minutes idle.
 - **int_score** — FineWeb-Edu column: the classifier's educational score rounded to an integer 0-5; every row in FineWeb-Edu has 3 or more.
 - **Interruptible / spot / preemptible instance** — a discounted GPU the provider can reclaim at any time; only for jobs that checkpoint and resume automatically.
+- **keep_start truncation** — TRL's way of cutting a too-long example: keep the first `max_length` tokens and drop the end, so late turns of long conversations are lost.
 - **Kill checklist** — the steps before leaving any rented machine: results safe, terminate, empty instance list, billing checked, ledger line.
 - **Ledger** — the dated list of every spend in `budget.md`, with the estimate before and the actual cost after each session.
+- **LoRA (low-rank adaptation)** — fine-tuning small low-rank adapter matrices next to frozen weights; saves memory for large models, saves little for a 350M model, and produces an adapter rather than a full model.
+- **Loss mask** — the per-token flags (label -100 in Hugging Face) that exclude tokens from the loss while still feeding them to the model.
 - **Manifest** — a file listing every data file with size and sha256 at a pinned revision, used to verify and document what you trained on.
+- **Matched tokens** — comparing runs after the same number of training tokens (here at the end of the same schedule), not after the same wall-clock time.
+- **Mean token accuracy** — TRL's logged share of trained tokens where the model's top-1 prediction equals the target token.
 - **meta.json** — description of a shard directory: tokenizer, vocab size, EOT id, tokens, bytes and documents per split; used for bits-per-byte and checks.
 - **MFU (model FLOPs utilization)** — achieved model FLOP/s (≈ 6·N·tokens/s) divided by the GPU's dense peak; 30-50% is typical for well-tuned small-model training.
+- **Mixed precision with fp32 master weights** — keeping weights and optimizer state in fp32 while running matmuls in bf16 autocast; without the fp32 copy, small updates are rounded away by bf16's ~3 significant digits.
 - **Multipart upload** — splitting a large object into chunks uploaded in parallel; tuned in rclone with `--s3-chunk-size` and `--s3-upload-concurrency`.
+- **Muon** — optimizer for 2D weight matrices that orthogonalises the momentum update with Newton–Schulz iterations; embeddings, head and norms stay on AdamW.
 - **Network volume (RunPod)** — persistent storage in one RunPod data centre that pods there can mount; $0.07/GB-month below 1 TB.
 - **NVLink** — NVIDIA's high-bandwidth GPU-to-GPU interconnect; shown as `NV#` in `nvidia-smi topo -m`.
 - **Object storage** — storage for whole files ("objects") in buckets, accessed over HTTP with an API such as S3, rather than as a mounted disk.
 - **ODC-By** — Open Data Commons Attribution License 1.0: any use of a database, including commercial, as long as you attribute it when you share it or a derived database.
 - **On-demand instance** — a GPU you keep until you release it, at a fixed hourly price.
+- **Over-training** — training a fixed-size model on more tokens than compute-optimal, trading training compute for a better small model that is cheaper to use.
+- **Packing** — concatenating several short examples into one fixed-length row to avoid padding; in TRL 1.17 the default best-fit-decreasing packing needs padding-free FlashAttention to keep examples from attending to each other.
 - **Parquet** — columnar, compressed file format used by Hugging Face datasets; FineWeb-Edu ships ~2.15 GB parquet files.
 - **Planning rate** — the assumed price per GPU-hour used before real prices and throughput are measured; $4.00 in this course until lesson 04.3.
 - **Pod template** — a saved RunPod launch configuration: image, disks, ports and environment variables (including secret references).
 - **Prepaid credit** — a balance loaded in advance (RunPod, Vast.ai, LLM APIs); with automatic top-up off, an empty balance stops spending.
 - **Push protection** — GitHub secret scanning that blocks pushes containing known secret formats; on by default for users' pushes to public repositories.
+- **QK-norm** — normalising queries and keys per head before the attention dot product; widens the range of stable learning rates (used in Qwen3).
 - **rclone** — command-line tool that copies, checks and syncs files between local disks and dozens of storage backends.
 - **rclone copy vs sync** — `copy` only adds and updates files at the destination; `sync` also deletes destination files that are missing at the source.
+- **RMSNorm** — normalisation that divides by the root mean square of the activations with a learned scale, without LayerNorm's mean subtraction and bias.
+- **RoPE (rotary position embedding)** — encodes position by rotating query and key vectors by position-dependent angles inside attention, replacing a learned position table.
 - **RunPod secret** — a value stored in RunPod and substituted into a pod's environment at boot via `{{ RUNPOD_SECRET_name }}`; never shown again after creation.
 - **runpodctl** — RunPod's CLI; preinstalled in pods with a pod-scoped key, so `runpodctl pod stop $RUNPOD_POD_ID` can stop the pod from inside.
 - **S3-compatible API** — the Amazon S3 protocol implemented by other providers (Cloudflare R2, Backblaze B2, Hugging Face buckets), so the same tools work everywhere.
 - **Scaling efficiency** — multi-GPU throughput divided by (number of GPUs × single-GPU throughput); ~0.9 is a planning value for 8×H100 SXM with NVLink.
 - **secrets.env** — the private file `~/.config/mygpt/secrets.env` (mode 600, outside any repo) holding the learner's API keys as environment variables.
+- **Seed spread** — the difference in the final metric between control runs that differ only in the random seed; twice the spread is the course's decision threshold.
+- **SFT (supervised fine-tuning)** — training a pretrained model on example conversations with the ordinary next-token loss, so it learns to answer in a chat format and stop; it teaches behaviour and format, not new knowledge.
+- **SIGTERM / SIGKILL** — the polite stop signal a program can catch (mygpt saves a checkpoint) and the forced one it cannot (resume from the last interval checkpoint).
 - **Smoke run** — a tiny training run (`configs/smoke_cpu.yaml`) that exercises config, training, validation, checkpointing and resume in under a minute on a CPU.
+- **smol-smoltalk** — Hugging Face's Apache-2.0 SFT dataset for models under 1B parameters (460k train conversations), the SFT data of SmolLM2-360M-Instruct.
 - **Special token** — a token id with a reserved meaning that the BPE never produces from ordinary text, such as `<|endoftext|>`.
 - **Spend limit (RunPod)** — RunPod's default cap of $80/hour on the combined hourly rate of an account's resources; a rate limit, not a total.
 - **Stop-loss** — a rule to stop and re-plan when a step costs more than its estimate by a set margin (25% in this course).
+- **SwiGLU** — gated MLP, down(SiLU(gate(x)) * up(x)); with hidden size 8/3·d it has the same parameters as a 4·d GELU MLP.
 - **Terminate vs stop** — terminating deletes a cloud machine and ends its billing; stopping or powering off can leave the disk, or on some providers the whole instance, billing.
+- **Tied embeddings** — using the input embedding matrix also as the output projection; untying adds vocab × width parameters but no matmul FLOPs.
 - **tmux** — terminal multiplexer that keeps processes running after an SSH connection drops (`tmux attach` to return).
 - **Token report** — `TOKEN_REPORT.md`: tokenizer facts, compression, shard sets, validation overlap and decontamination counts; cited by later configs and reports.
 - **Token shard** — a binary file of uint16 token ids with a 1 KB header (magic 20261113, version, token count, vocab size); up to 100M tokens (200 MB) each.
+- **Tokens per parameter** — training tokens divided by model parameters; about 20 is Chinchilla-optimal for compute, this course's main run uses about 59 (over-training).
+- **torchrun** — PyTorch's launcher that starts one training process per GPU and sets RANK, LOCAL_RANK and WORLD_SIZE; `--standalone` runs everything on one node.
 - **Two-factor authentication (2FA)** — a second login factor such as an authenticator-app code, required here on every account that can spend money or hold secrets.
 - **uint16** — 16-bit unsigned integer (0–65,535); stores token ids in 2 bytes, which limits the vocabulary to 65,536.
 - **uv** — Astral's fast Python package and project manager; creates the virtualenv, installs Python itself and selects PyTorch wheels with `--torch-backend`.
 - **Validation split** — the first ~50M tokens (whole documents) of each shard set's input, written to `val_*.bin` and never trained on.
 - **Vocabulary size** — number of distinct token ids; it sets the embedding and output-layer size (V × d parameters, about 6·V·d training FLOPs per token for the output layer).
+- **WSD schedule (warmup-stable-decay)** — linear warmup, a long constant-LR phase, then a short decay (here the last 20% of steps); ends about level with cosine and lets the run length be chosen late.
 - **Xet** — Hugging Face's chunk-deduplicating storage and transfer backend; `hf_xet` is the default download client since huggingface_hub 1.0 (`HF_XET_HIGH_PERFORMANCE=1` to go faster).
+- **Xid error** — an NVIDIA driver error code in the kernel log (`dmesg`) that signals a GPU hardware or driver fault.

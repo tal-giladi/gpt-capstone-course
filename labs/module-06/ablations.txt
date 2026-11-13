@@ -1,0 +1,31 @@
+# Ablation queue for tools/run_ablations.sh and tools/ablation_table.py (Module 6).
+# One run per line: NAME  OVERRIDES...   (overrides go on top of configs/ablation_base.yaml)
+# A run whose name starts with abl_control is a control. Lines starting with # are skipped:
+# uncomment a block when you reach its lesson. Never reuse a name for a different change.
+
+# --- 06.1 controls: identical except the seed (measures noise)
+abl_control_s1337   train.seed=1337
+abl_control_s1338   train.seed=1338
+
+# --- 06.2 architecture, one change at a time
+# abl_rope            model.pos_emb=rope
+# abl_rmsnorm         model.norm=rmsnorm
+# abl_swiglu          model.mlp=swiglu
+# abl_qknorm          model.qk_norm=true
+# abl_nobias          model.bias=false
+# abl_untied          model.tie_embeddings=false
+# --- 06.2 combined, exportable bundles
+# abl_llama           model.pos_emb=rope model.norm=rmsnorm model.mlp=swiglu model.bias=false
+# abl_qwen3           model.pos_emb=rope model.norm=rmsnorm model.mlp=swiglu model.bias=false model.qk_norm=true
+
+# --- 06.3 optimizer and schedule, on top of the architecture you chose in 06.2.
+# "@ARCH ..." defines a macro: the word ARCH in later lines is replaced by these overrides.
+# Your 06.2 winner (abl_llama or abl_qwen3) is the control for these runs.
+# @ARCH model.pos_emb=rope model.norm=rmsnorm model.mlp=swiglu model.bias=false model.qk_norm=true
+# abl_arch_lr3e-4     ARCH train.lr=3e-4
+# abl_arch_lr1.2e-3   ARCH train.lr=1.2e-3
+# abl_arch_wsd        ARCH train.schedule=wsd train.decay_frac=0.2 train.min_lr_ratio=0.0
+# abl_arch_muon       ARCH train.optimizer=muon train.muon_lr=0.02 train.weight_decay=0.0
+# abl_arch_muon_lr01  ARCH train.optimizer=muon train.muon_lr=0.01 train.weight_decay=0.0
+# abl_arch_muon_lr04  ARCH train.optimizer=muon train.muon_lr=0.04 train.weight_decay=0.0
+# abl_arch_muon_wsd   ARCH train.optimizer=muon train.muon_lr=0.02 train.weight_decay=0.0 train.schedule=wsd train.decay_frac=0.2 train.min_lr_ratio=0.0

@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    A reviewer says training a 337M model on 20B tokens "wastes compute, since Chinchilla says 6.7B". What
+    is the best answer for this project?
+  options:
+    - Chinchilla does not apply to models below 1B parameters, so the 20-tokens rule is irrelevant here.
+    - More tokens per parameter always gives a lower loss per FLOP, so 20B is also compute-optimal.
+    - The size is fixed by the goal, and past 20 tokens/param the model still improves.
+    - The 20B tokens are needed because the own tokenizer produces fewer tokens per document than GPT-2.
+  correct: 2
+  explanation: >-
+    Chinchilla minimises loss for a fixed compute budget, which would mean ~580M on ~11.6B tokens. This
+    project fixes the size (to beat GPT-2 medium and keep SFT, eval and the demo cheap), and a fixed-size
+    model keeps improving with more data, so over-training is the deliberate choice.
+- id: q2
+  question: >-
+    Your 124M AdamW sweep picked lr 1.2e-3. You switch to the 350M model with AdamW and keep the 0.5M-token
+    batch. Which peak LR does the lesson's transfer rule suggest?
+  options:
+    - About 6e-4, halving your best value as GPT-3 did from Small to Medium.
+    - About 2.4e-3, doubling it because the model has about three times the parameters.
+    - About 1.2e-3, since an LR found with the same batch size transfers unchanged.
+    - About 3e-4, since GPT-3 Medium used 3e-4 regardless of what small runs show.
+  correct: 0
+  explanation: >-
+    GPT-3 halved the LR from 125M (6e-4) to 350M (3e-4) at the same batch, so the rule is to halve your
+    own best 124M value. Ignoring your sweep throws away evidence; larger models need lower, not higher,
+    AdamW LRs.
+- id: q3
+  question: >-
+    After Module 6 you have $330 left for the main run and its contingency. `budget_calc.py` estimates the
+    main run at $280 on today's 8×H100 price. What does the decision table say?
+  options:
+    - Go, because $330 covers $280 with $50 to spare for evaluation and post-training.
+    - Shrink the model to ~240M, because less than 25% contingency always requires a smaller model.
+    - Wait for prices to fall, because the estimate is above the $160 in the original course plan.
+    - Cut tokens to 15B or find a cheaper verified 8× host, since $330 is only 1.18× the estimate.
+  correct: 3
+  explanation: >-
+    330 / 280 = 1.18, inside the 1.10–1.25 band: cut D (cost scales linearly with tokens) or lower the
+    price first. Shrinking the model is the step for under 1.10×; the later modules' costs were already
+    subtracted before this comparison.
+- id: q4
+  question: >-
+    You freeze a recipe of RoPE, RMSNorm, GELU MLP, no bias and Muon because GELU edged out SwiGLU in
+    one ablation. What happens when you run the lesson's export check?
+  options:
+    - It exports as `LlamaForCausalLM`, because Llama accepts any activation function in its config.
+    - It refuses the config as an ablation-only combination, because Llama/Qwen3 need SwiGLU.
+    - It exports as `GPT2LMHeadModel`, because GELU is the GPT-2 activation and decides the class.
+    - It exports fine, but the logit check fails because Muon-trained weights differ numerically.
+  correct: 1
+  explanation: >-
+    Only all-GPT-2 settings or RoPE + RMSNorm + SwiGLU + no bias (+ QK-norm) map to standard classes, so
+    this mix is refused, which is exactly why the check runs before the $180 run. The optimizer has no
+    effect on export.
