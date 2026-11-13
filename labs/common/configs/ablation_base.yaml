@@ -1,0 +1,48 @@
+# The ablation CONTROL run: GPT-2 124M architecture, your own 32k BPE tokenizer, ~1B tokens, 1 GPU.
+# Every ablation changes exactly ONE key on top of this file, e.g.
+#   python -m mygpt.train --config configs/ablation_base.yaml model.pos_emb=rope \
+#       train.out_dir=runs/abl_rope train.run_name=abl_rope
+# Keep seed, data, tokens and batch identical across ablations; compare val_bpb.
+model:
+  vocab_size: 32768
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  dropout: 0.0
+  pos_emb: learned
+  rope_theta: 10000.0
+  norm: layernorm
+  mlp: gelu
+  qk_norm: false
+  bias: true
+  tie_embeddings: true
+
+train:
+  data_dir: data/fineweb_edu_own32k
+  train_tokens: 1_000_000_000  # 1907 steps
+  total_batch_tokens: 524288
+  micro_batch_size: 64         # 1 GPU -> accum 8
+  seq_len: 1024
+  lr: 6.0e-4
+  min_lr_ratio: 0.1
+  warmup_tokens: 100_000_000
+  schedule: cosine
+  decay_frac: 0.2
+  optimizer: adamw
+  muon_lr: 0.02
+  weight_decay: 0.1
+  grad_clip: 1.0
+  dtype: bf16
+  compile: true
+  seed: 1337
+  out_dir: runs/ablation_base
+  run_name: ablation_base
+  eval_every: 250
+  eval_tokens: 5_242_880
+  hellaswag_every: 0           # too noisy at 1B tokens; compare val_bpb
+  ckpt_every: 500
+  keep_last: 2
+  ckpt_remote: ""
+  wandb_project: ""
+  log_every: 10

@@ -151,3 +151,24 @@ Module 11 — Ship it
 - 11.3 · The technical report and final cost ledger
 
 Sidebar running numbers 01..32 in this order (01.1 → 01, …, 11.3 → 32).
+
+## Shared conventions (fixed by modules 2 and 4 — all lessons follow them)
+
+- **Price updates (2026-11-13):** RunPod Secure H100 SXM $4.39, Community $2.69; Lambda 8×H100
+  $3.99/GPU-h rising to $4.59 on 2026-11-16 (single $4.89); Vast.ai H100 SXM from ~$1.87 (median
+  $2.40); Backblaze B2 now $6.95/TB-mo. Planning rate stays $4.00/GPU-h until 04.3 replaces it
+  with the learner's measured numbers. PyTorch PyPI wheels = CUDA 13.0 → NVIDIA driver ≥ 580.
+  `hf_transfer` is gone (huggingface_hub ≥ 1.0); use `HF_XET_HIGH_PERFORMANCE=1`.
+- **Data plan:** FineWeb-Edu `sample/10BT` (baseline, GPT-2 tokenizer) + first 30 files of
+  `sample/100BT` (~64.6 GB, ~22.5B GPT-2 tokens; own tokenizer, ablations + main run).
+- **Bucket:** rclone remote `r2`, root `MYGPT_REMOTE=r2:mygpt`, configured only by
+  `RCLONE_CONFIG_R2_*` env vars. Prefixes: `raw/fineweb-edu/<subset>/`, `manifests/`,
+  `tokenizer/`, `tok/<name>/`, `ckpt/<run_name>/`, `hf/`, `tmp/`. Shard sets:
+  `tok/gpt2-10BT/` (baseline) and `tok/bpe32k-100BT-30/` (own 32,768-vocab tokenizer); locally
+  `data/tok/<same name>`. Use `rclone copy`, never `sync`, unless a lesson says why.
+- **Learner's project repo:** a copy of `labs/common` pushed to the learner's own GitHub repo;
+  module lab helpers copied into its `tools/` folder. `budget.md` at its root, ledger rows
+  `| date | lesson | item | estimate | actual |`.
+- **Box setup:** `labs/module-04/setup_box.sh`; auto-shutdown
+  `bash scripts/autoshutdown.sh --idle-minutes 5 --stop-cmd '...'` (OS shutdown does NOT stop
+  billing on RunPod or Lambda — terminate via provider CLI/API).

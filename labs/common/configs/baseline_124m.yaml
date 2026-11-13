@@ -1,0 +1,43 @@
+# Faithful GPT-2 124M on 10B FineWeb-Edu tokens (GPT-2 tokenizer), 8 GPUs.
+#   torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/baseline_124m.yaml
+# 10e9 / 524288 = 19073 steps. On 8xH100 expect roughly 1.2-1.5M tok/s -> ~2 h wall clock.
+model:
+  vocab_size: 50304        # 50257 padded to a multiple of 128
+  n_layer: 12
+  n_head: 12
+  n_embd: 768
+  block_size: 1024
+  dropout: 0.0
+  pos_emb: learned
+  norm: layernorm
+  mlp: gelu
+  qk_norm: false
+  bias: true
+  tie_embeddings: true
+
+train:
+  data_dir: data/fineweb_edu_10B_gpt2
+  train_tokens: 10_000_000_000
+  total_batch_tokens: 524288   # 0.5M tokens/step (GPT-3 small)
+  micro_batch_size: 64         # 64 x 1024 per GPU; accum = 524288 / (64*1024*8) = 1
+  seq_len: 1024
+  lr: 6.0e-4
+  min_lr_ratio: 0.1
+  warmup_tokens: 375_000_000   # ~715 steps
+  schedule: cosine
+  optimizer: adamw
+  weight_decay: 0.1
+  grad_clip: 1.0
+  dtype: bf16
+  compile: true
+  seed: 1337
+  out_dir: runs/baseline_124m
+  run_name: baseline_124m
+  eval_every: 250
+  eval_tokens: 10_485_760      # 20 batches of 64x1024x8
+  hellaswag_every: 1000
+  ckpt_every: 1000
+  keep_last: 3
+  ckpt_remote: ""              # e.g. r2:my-gpt-bucket/checkpoints/baseline_124m
+  wandb_project: ""            # e.g. my-gpt
+  log_every: 10

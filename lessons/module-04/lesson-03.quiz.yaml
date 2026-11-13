@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    Using C ≈ 6ND, an H100's 989 TFLOP/s dense BF16 peak and 40% MFU, about how many GPU-hours does the
+    350M-parameter model need for 20B tokens?
+  options:
+    - About 3.7 GPU-hours, since eight GPUs share the work.
+    - About 118 GPU-hours, at roughly a dollar per GPU-hour.
+    - About 30 GPU-hours, or roughly 3.7 hours of wall clock on 8 GPUs.
+    - About 12 GPU-hours, since the backward pass reuses the forward FLOPs.
+  correct: 2
+  explanation: >-
+    6 × 3.5e8 × 2e10 = 4.2e19 FLOP; at 0.4 × 989e12 FLOP/s that is about 106,000 GPU-seconds, or 29.5
+    GPU-hours. On 8 GPUs that is about 3.7 hours of wall clock before scaling losses and overhead.
+- id: q2
+  question: >-
+    Your benchmark of `main_350m` shows 175,000 tokens/s per GPU. You will run on an 8×H100 node at
+    $4.39 per GPU-hour and assume 90% scaling. What does 1B training tokens cost?
+  options:
+    - About $7.74, from 4.39 × 1e9 / (3600 × 175,000 × 0.9).
+    - About $0.97, because the node processes eight times as many tokens per second.
+    - About $61.90, because all eight GPUs are billed for every token.
+    - About $6.97, because the scaling factor lowers the cost per token.
+  correct: 0
+  explanation: >-
+    Per-GPU cost per second is p/3600 and per-GPU useful throughput is r × s, so cost per token is
+    p / (3600 × r × s), the same on 1 or 8 GPUs. Imperfect scaling makes each token more expensive,
+    not cheaper.
+- id: q3
+  question: >-
+    `bench.py` reports 520,000 tokens/s for `ablation_base` but only 95,000 tokens/s for `main_350m`.
+    The parameter ratio is about 2.8. What do you check first?
+  options:
+    - Nothing; larger models always lose more than half their throughput to attention.
+    - The 350M config's settings, such as compile, dtype and micro-batch, against the ablation config.
+    - The R2 bandwidth, because the larger model reads its shards from the bucket during benchmarks.
+    - The price argument, because a wrong `--price-per-gpu-hour` changes the measured tokens/s.
+  correct: 1
+  explanation: >-
+    With the same code and GPU, tokens/s should scale roughly inversely with N, so about 186,000 would
+    be expected. A 5.5× drop points to a config difference such as compile off, fp32, or a micro-batch
+    that is too small; data is read from local disk, not from R2.
+- id: q4
+  question: >-
+    Your revised budget comes out at a $462 subtotal against the $500 cap. Which change follows the
+    lesson's decision rule?
+  options:
+    - Keep everything and drop the contingency, since the estimate already contains overhead.
+    - Cut the evaluation and SFT/DPO lines, since they come after the main run anyway.
+    - Run the main run on interruptible GPUs at the same size to save about half its cost.
+    - Shrink the main model to about 250M or take the cheaper 124–200M path, then recompute.
+  correct: 3
+  explanation: >-
+    Over $450 leaves under 10% contingency, so the plan must change before money is spent; main-run
+    cost scales with N × D. Interruptible GPUs without proven resume, or dropping later modules, trade
+    a budget problem for a failed project.

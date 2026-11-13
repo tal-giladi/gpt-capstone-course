@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    In 02.2 your home upload to R2 measured 12 MB/s. You must move 93 GB from Hugging Face into R2.
+    What is the sensible plan?
+  options:
+    - Download at home overnight, then upload over the next day, since home bandwidth costs nothing.
+    - Use a cloud CPU box with a large disk for about 1.5 hours, which costs well under a dollar.
+    - Rent a 1×H100 pod for the transfer, because GPU pods come with the fastest network links.
+    - Ask Hugging Face for a direct transfer into R2, since both sides speak the S3 protocol.
+  correct: 1
+  explanation: >-
+    At 12 MB/s the upload alone takes over two hours of saturated line, plus the download. A
+    data-centre CPU box with 20 TB of included traffic does it in well under two hours for roughly
+    $0.35; a GPU box would cost ten times more for no benefit.
+- id: q2
+  question: >-
+    You copied an old tutorial that runs `pip install hf_transfer` and sets
+    `HF_HUB_ENABLE_HF_TRANSFER=1`, and the download is slow. What is going on?
+  options:
+    - The `hf_transfer` package needs a Rust toolchain, so it silently fell back to plain HTTP.
+    - FineWeb-Edu is a gated dataset, so the fast path only works after you accept its terms.
+    - The flag only applies to model repos, so dataset downloads always use the slow path.
+    - The flag is ignored since huggingface_hub 1.0; use `HF_XET_HIGH_PERFORMANCE=1` instead.
+  correct: 3
+  explanation: >-
+    `hf_transfer` was removed in huggingface_hub 1.0 and `hf_xet` became the default transfer
+    backend. The tuning knob is now `HF_XET_HIGH_PERFORMANCE`, and passing `HF_TOKEN` avoids the low
+    anonymous rate limits.
+- id: q3
+  question: >-
+    The manifest script reports `sha256 mismatch` for one file of `sample/100BT`, and every other file
+    is OK. What do you do?
+  options:
+    - Delete that file locally, rerun the download so it is fetched again, then rerun the manifest.
+    - Ignore it, since one corrupt file out of 30 changes the token count by only about 3%.
+    - Upload it anyway; rclone recomputes checksums on upload and repairs damaged parquet files.
+    - Pin a different dataset revision, because a mismatch means the file changed upstream.
+  correct: 0
+  explanation: >-
+    A single mismatch with all other files matching almost always means an interrupted or partial
+    download. Re-fetching that one file is cheap; a corrupt parquet file would otherwise crash or
+    silently skip data during tokenization.
+- id: q4
+  question: >-
+    The upload and both `rclone check` runs are done, the manifests are in git and in the bucket. You
+    plan to tokenize in Module 3 next week. What do you do with the Hetzner server?
+  options:
+    - Power it off in the console so it stops billing and keeps the data for next week.
+    - Keep it running, because downloading 93 GB again next week would cost egress fees.
+    - Delete it; next week you pull the parquet from R2 to a new box with free egress.
+    - Detach its disk as a snapshot and power it off, so only the snapshot is billed.
+  correct: 2
+  explanation: >-
+    Hetzner bills a server until it is deleted, even when powered off. The bucket is now the source
+    of truth and R2 egress is free, so a fresh box can pull the data again in minutes.

@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    On a fresh pod, `nvidia-smi` shows driver 570 and your project's pinned PyTorch wheel is built for
+    CUDA 13.0. What do you expect, and what do you do?
+  options:
+    - Training works but runs slower; continue and note the host in budget.md.
+    - Torch reports no usable GPU; terminate and redeploy with the CUDA 13+ filter.
+    - Torch falls back to CUDA 12 kernels automatically; nothing needs to change.
+    - The wheel fails to install; switch the project to the CUDA 12.8 wheel index.
+  correct: 1
+  explanation: >-
+    CUDA 13.x needs driver 580 or newer, so `torch.cuda.is_available()` is False on this host.
+    Redeploying on a host with a new enough driver costs a minute; the cu128 index is retired, so
+    downgrading is not a real option.
+- id: q2
+  question: >-
+    `gpu_check.py` reports `bf16 matmul 390 TFLOP/s (39% of 989 dense peak)` on an H100 sold as SXM, and
+    `power.limit` shows 350 W. What is the right call?
+  options:
+    - Keep it; matmul benchmarks are noisy and a real training step will be faster.
+    - Keep it, but lower the micro-batch size so the GPU stays inside its power limit.
+    - Release it now and take another host, because it is likely a PCIe/NVL part or capped.
+    - Restart the pod, because the first matmuls after boot always run at half speed.
+  correct: 2
+  explanation: >-
+    A healthy H100 SXM has a 700 W limit and reaches 60-80% of dense peak on a large bf16 matmul. A
+    350 W limit points to a PCIe/NVL card or a capped host; it will train slowly for every hour you
+    pay, so release it in the first minutes.
+- id: q3
+  question: >-
+    Your pod downloads from R2 at 25 MB/s. Your main-run shards are 45 GB and the main run will use an
+    8×H100 node at $35/h. What does this measurement tell you to plan for?
+  options:
+    - About 30 minutes of an idle 8-GPU node (~$17) unless you pick a faster host.
+    - Nothing, because the 8-GPU node will have eight times this bandwidth.
+    - The R2 bucket is throttling you, so move the shards to a RunPod network volume.
+    - Training will be input-bound at 25 MB/s, because shards are read during training.
+  correct: 0
+  explanation: >-
+    45,000 MB at 25 MB/s is 30 minutes, at $35/h about $17 of idle GPUs. Bandwidth is per host, not
+    per GPU, so check it on the 8-GPU node too and prefer hosts that pull at hundreds of MB/s. Once
+    local, shards are read from disk, far faster than training consumes them.
+- id: q4
+  question: >-
+    Why does this lesson arm both a 3-hour `sleep; runpodctl pod stop` and an idle-GPU guard, instead
+    of just the idle guard?
+  options:
+    - The idle guard only works on Secure Cloud, and the hard stop covers Community Cloud.
+    - RunPod requires a scheduled stop for pods that use secrets as environment variables.
+    - The hard stop also deletes the pod, while the idle guard only pauses it.
+    - The idle guard can miss a stuck process that keeps the GPU busy; the timer cannot.
+  correct: 3
+  explanation: >-
+    A hung process holding the GPU, or a guard that crashed, defeats an idle check. A plain timer
+    started first is independent of both, so the worst case is bounded at a known cost.

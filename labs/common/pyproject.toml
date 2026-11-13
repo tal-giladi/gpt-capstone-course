@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mygpt"
+version = "0.1.0"
+description = "GPT-2-class pretraining, export and post-training scripts for the GPT capstone course"
+readme = "README.md"
+requires-python = ">=3.11"
+# Versions checked against PyPI on 2026-11-13: lower bound = current stable, upper = next major.
+dependencies = [
+    "torch>=2.15,<3",
+    "numpy>=2.5,<3",
+    "pyyaml>=6.0.3,<7",
+    "tiktoken>=0.14,<1",
+    "tokenizers>=0.23,<1",
+    "datasets>=5.2,<6",
+    "huggingface_hub>=2.4,<3",
+    "pyarrow>=26,<27",
+    "wandb>=0.31,<1",
+    "transformers>=5.22,<6",
+    "safetensors>=0.8,<1",
+]
+
+[project.optional-dependencies]
+post = [
+    "trl>=1.17,<2",
+    "peft>=0.21,<1",
+    "accelerate>=1.15,<2",
+    "anthropic>=2.8,<3",   # judge_winrate.py --judge anthropic
+    "openai>=3.50,<4",     # judge_winrate.py --judge openai (any OpenAI-compatible endpoint)
+]
+eval = ["lm-eval>=0.4.13,<0.5"]
+demo = ["gradio>=6.32,<7"]
+dev = ["pytest>=9.2,<10"]
+
+[tool.setuptools]
+packages = ["mygpt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

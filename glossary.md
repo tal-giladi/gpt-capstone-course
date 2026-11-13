@@ -1,3 +1,43 @@
 # Glossary
 
 Terms used across the capstone, in alphabetical order.
+
+- **6ND** — approximate training compute of a dense transformer: 6 FLOPs per parameter per training token (2 forward, 4 backward), plus a few percent for attention.
+- **Backblaze B2** — S3-compatible object storage at $6.95/TB-month with free egress up to 3× stored data (checked 2026-11-13).
+- **Bucket-scoped token** — an access key limited to the objects of one bucket; it cannot list or create buckets.
+- **Cloudflare R2** — S3-compatible object storage with no egress fees ($0.015/GB-month Standard, checked 2026-11-13).
+- **Common Crawl Terms of Use** — terms attached to all Common Crawl-derived corpora, accepted in addition to the dataset's own license.
+- **Community cloud / marketplace** — GPUs hosted by smaller third parties (RunPod Community, Vast.ai); cheaper, with more variation in host quality.
+- **Container disk vs volume disk (RunPod)** — container disk is erased when a pod stops and is not billed while stopped; volume disk survives a stop and bills $0.20/GB-month while stopped.
+- **CUDA driver compatibility** — PyTorch wheels built for CUDA 13.x need NVIDIA driver 580 or newer; an older driver means no usable GPU.
+- **Data card** — a short document stating a dataset's source, license, size, revision, known properties and risks; cited by the model card.
+- **Dataset revision** — the git commit sha of a Hugging Face dataset repo; pinning it makes a download reproducible.
+- **Dense vs sparse FLOPs** — vendors headline tensor-core throughput "with sparsity" (2:4 structured), twice the dense figure that training actually uses.
+- **Dollars per billion tokens** — price per GPU-hour × 10^9 / (3600 × tokens/s per GPU × scaling efficiency); the number to compare GPUs and providers by.
+- **Egress** — data transferred out of a provider's network; often billed per GB, free on Cloudflare R2.
+- **FineWeb-Edu** — Hugging Face's English web corpus (1.3T GPT-2 tokens) filtered from FineWeb by a classifier trained on Llama-3-70B-Instruct educational-value ratings; keeps pages with rounded score >= 3. ODC-By license.
+- **H100 PCIe / NVL** — H100 as a PCIe card (350-400 W, lower clocks; NVL: 94 GB, 835 TFLOP/s dense BF16); usually no NVLink to all other GPUs in the server.
+- **H100 SXM** — the socketed H100 module used on 8-GPU HGX boards: up to 700 W, 80 GB HBM3 at 3.35 TB/s, 900 GB/s NVLink, 989 TFLOP/s dense BF16.
+- **Hard stop** — a plain timer that stops the machine after a fixed time no matter what is running; the backstop behind an idle guard.
+- **HGX** — NVIDIA's 8-GPU baseboard where every GPU is connected to every other through NVLink switches.
+- **Idle guard (auto-shutdown)** — a script that polls GPU utilization and stops the machine after N minutes idle.
+- **int_score** — FineWeb-Edu column: the classifier's educational score rounded to an integer 0-5; every row in FineWeb-Edu has 3 or more.
+- **Interruptible / spot / preemptible instance** — a discounted GPU the provider can reclaim at any time; only for jobs that checkpoint and resume automatically.
+- **Manifest** — a file listing every data file with size and sha256 at a pinned revision, used to verify and document what you trained on.
+- **MFU (model FLOPs utilization)** — achieved model FLOP/s (≈ 6·N·tokens/s) divided by the GPU's dense peak; 30-50% is typical for well-tuned small-model training.
+- **Multipart upload** — splitting a large object into chunks uploaded in parallel; tuned in rclone with `--s3-chunk-size` and `--s3-upload-concurrency`.
+- **Network volume (RunPod)** — persistent storage in one RunPod data centre that pods there can mount; $0.07/GB-month below 1 TB.
+- **NVLink** — NVIDIA's high-bandwidth GPU-to-GPU interconnect; shown as `NV#` in `nvidia-smi topo -m`.
+- **Object storage** — storage for whole files ("objects") in buckets, accessed over HTTP with an API such as S3, rather than as a mounted disk.
+- **ODC-By** — Open Data Commons Attribution License 1.0: any use of a database, including commercial, as long as you attribute it when you share it or a derived database.
+- **On-demand instance** — a GPU you keep until you release it, at a fixed hourly price.
+- **Parquet** — columnar, compressed file format used by Hugging Face datasets; FineWeb-Edu ships ~2.15 GB parquet files.
+- **Pod template** — a saved RunPod launch configuration: image, disks, ports and environment variables (including secret references).
+- **rclone** — command-line tool that copies, checks and syncs files between local disks and dozens of storage backends.
+- **rclone copy vs sync** — `copy` only adds and updates files at the destination; `sync` also deletes destination files that are missing at the source.
+- **RunPod secret** — a value stored in RunPod and substituted into a pod's environment at boot via `{{ RUNPOD_SECRET_name }}`; never shown again after creation.
+- **runpodctl** — RunPod's CLI; preinstalled in pods with a pod-scoped key, so `runpodctl pod stop $RUNPOD_POD_ID` can stop the pod from inside.
+- **S3-compatible API** — the Amazon S3 protocol implemented by other providers (Cloudflare R2, Backblaze B2, Hugging Face buckets), so the same tools work everywhere.
+- **Scaling efficiency** — multi-GPU throughput divided by (number of GPUs × single-GPU throughput); ~0.9 is a planning value for 8×H100 SXM with NVLink.
+- **tmux** — terminal multiplexer that keeps processes running after an SSH connection drops (`tmux attach` to return).
+- **Xet** — Hugging Face's chunk-deduplicating storage and transfer backend; `hf_xet` is the default download client since huggingface_hub 1.0 (`HF_XET_HIGH_PERFORMANCE=1` to go faster).

@@ -1,0 +1,54 @@
+- id: q1
+  question: >-
+    For the 8-GPU main run you see two offers at nearly the same price per GPU-hour: 8× H100 SXM on an
+    HGX board, and 8× H100 PCIe cards in one server. Which do you take and why?
+  options:
+    - The PCIe server, because each card draws less power and therefore throttles less often.
+    - Either one, because data-parallel training only syncs gradients once per step.
+    - The PCIe server, because its 94 GB cards fit a larger micro-batch per GPU.
+    - The SXM node, because NVLink keeps the per-step gradient all-reduce fast.
+  correct: 3
+  explanation: >-
+    SXM GPUs have higher clocks and 900 GB/s NVLink to each other; PCIe cards usually reduce over PCIe.
+    With DDP the all-reduce happens every step, so the interconnect decides how close 8 GPUs get to 8×.
+- id: q2
+  question: >-
+    A B200 costs $7.99/h and an H100 SXM $4.39/h on the same provider. A forum post says "B200 is 2.3×
+    faster, so it is cheaper per token". How do you decide for your 350M model?
+  options:
+    - Trust the spec ratio, since dense BF16 peak is what training throughput scales with.
+    - Benchmark both on your config and compare measured dollars per billion tokens.
+    - Pick the H100, because small models cannot use any of the B200's extra speed.
+    - Pick the B200, because newer GPUs always give a higher MFU on the same code.
+  correct: 1
+  explanation: >-
+    Small models often fill a bigger GPU less well, so the real speed-up can be well below the peak ratio.
+    Only a measured tokens/s on your own config, converted to $ per 1B tokens, settles it.
+- id: q3
+  question: >-
+    You finished a 1-GPU benchmark on RunPod and clicked Stop. The pod has a 200 GB volume disk. What
+    are you paying now?
+  options:
+    - About $40 a month for the stopped volume disk, until you terminate the pod.
+    - Nothing, because RunPod only bills while a GPU is attached to the pod.
+    - The full GPU price, because a stopped pod keeps its GPU reserved for you.
+    - Only egress, because RunPod charges when the disk is later copied out.
+  correct: 0
+  explanation: >-
+    A stopped pod releases the GPU but keeps its volume disk, billed at $0.20/GB-month while stopped
+    (200 × $0.20 = $40). Terminating removes it; keep your data in the bucket instead.
+- id: q4
+  question: >-
+    A Vast.ai host offers 8×H100 SXM at $2.10 per GPU-hour, far below the others, with reliability 0.91
+    and a bandwidth price of $20/TB. You need to pull 65 GB of shards and run for 5 hours. What is the
+    best reading of this offer?
+  options:
+    - Take it; at 65 GB the bandwidth fee is only about $1.30 and the GPU saving is large.
+    - Skip it, because Vast.ai never allows more than one GPU per instance for training.
+    - Treat it as risky; low reliability on a multi-hour 8-GPU run can cost more than the saving.
+    - Take it, but as an interruptible bid, since that makes the host more reliable.
+  correct: 2
+  explanation: >-
+    The bandwidth cost is small here, but a 0.91 reliability score means hosts like it drop
+    noticeably often; a crash hours in wastes $100+ of compute unless your resume is proven.
+    Prefer verified hosts with high reliability for long runs.

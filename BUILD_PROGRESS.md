@@ -28,7 +28,8 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
-- (none)
+- Agent A: labs/common code + tests
+- Agent B: Module 2, then Module 4
 
 ## Decisions
 - Modules numbered 1–11 (plan's 0–10 shifted by one).

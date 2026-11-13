@@ -1,0 +1,119 @@
+- id: q1
+  question: >-
+    Provider A sells 8×H100 SXM at $4.39 per GPU-hour with free egress. Provider B sells 8×H100 SXM at
+    $3.00 per GPU-hour, charges $5/TB bandwidth, and its host takes about 40 minutes to pull your 45 GB
+    of shards. The main run takes 5.5 hours of training. Which is cheaper overall?
+  options:
+    - Provider A, because the 40 minutes of idle pulling on B costs more than its lower hourly rate saves.
+    - Provider A, because bandwidth charges at B add more than $40 for 45 GB of shards.
+    - Provider B, by roughly $45, even after the slow pull and the bandwidth fee.
+    - They cost almost exactly the same once the bandwidth fee is included.
+  correct: 2
+  explanation: >-
+    A: 5.5 h × $35.12 ≈ $193. B: (5.5 + 0.67) h × $24 ≈ $148, plus about $0.23 of bandwidth. The slow
+    pull and fee matter, but not enough to erase a $1.39/GPU-h gap; always do this arithmetic instead
+    of comparing hourly prices alone.
+- id: q2
+  question: >-
+    A colleague wants to rent 8 cheap H100 PCIe cards spread over two 4-GPU servers for the main run,
+    "to save 30%". What is the main technical risk?
+  options:
+    - PCIe cards cannot run bf16, so the run would fall back to fp32.
+    - Per-step gradient all-reduce over PCIe and the network can wreck scaling.
+    - Two servers need two copies of the dataset, which doubles the storage bill in R2.
+    - PCIe cards have less memory, so the 350M model would not fit on a single card.
+  correct: 1
+  explanation: >-
+    DDP all-reduces every step. Inside an SXM node that runs over 900 GB/s NVLink; across PCIe and an
+    inter-server network it can dominate step time, and the lower per-hour price buys fewer tokens.
+- id: q3
+  question: >-
+    You finished on Lambda, typed `sudo shutdown -h now` in the VM and closed your laptop. What is the
+    state of your bill?
+  options:
+    - Billing stopped when the VM powered off, as on most clouds.
+    - Billing continues at a reduced storage-only rate until you delete the disk.
+    - Billing stopped, but you pay a one-hour minimum for the shutdown.
+    - The instance may still be billed until it is terminated in the dashboard or API.
+  correct: 3
+  explanation: >-
+    Lambda's docs warn not to use shutdown commands to end instances; billing stops when the instance is
+    terminated from the dashboard or the Cloud API. Check the instance list after every session.
+- id: q4
+  question: >-
+    Your RunPod template injects the R2 secret as `RCLONE_CONFIG_R2_SECRET_ACCESS_KEY={{ RUNPOD_SECRET_r2_secret }}`
+    but the secret you created is named `r2_secret_access_key`. What happens when the pod boots?
+  options:
+    - The variable holds the literal placeholder text and rclone fails to authenticate.
+    - RunPod refuses to start the pod until the template is fixed.
+    - RunPod matches the closest secret name and the pod works as intended.
+    - The variable is empty, so rclone falls back to keys in `~/.config/rclone/rclone.conf`.
+  correct: 0
+  explanation: >-
+    An unmatched placeholder is not substituted, so the env var holds the placeholder and authentication
+    fails. Check with `env | grep RCLONE` and fix the name in the template.
+- id: q5
+  question: >-
+    `gpu_check.py` on a new 8×H100 node reports all eight GPUs healthy, but `nvidia-smi topo -m` shows
+    `SYS` between GPU 0-3 and GPU 4-7 instead of `NV18`. What do you conclude?
+  options:
+    - The two halves lack NVLink between them; expect poor 8-GPU scaling.
+    - The topology output is cosmetic and only matters for multi-node training.
+    - The GPUs are fine but the driver is too old to report NVLink correctly.
+    - It means the node is SXM and fully NVLink-connected, the best case.
+  correct: 0
+  explanation: >-
+    `NV#` entries mean NVLink between the GPU pair; `SYS` means traffic crosses PCIe and the CPU
+    interconnect. On an HGX SXM node every pair should show NVLink, so this host is not what you paid for.
+- id: q6
+  question: >-
+    You leave an 8×H100 node running a 5-hour main run overnight. Which guard setup bounds your worst
+    case best?
+  options:
+    - An idle-GPU guard of 30 minutes only, since the GPU is busy until training ends.
+    - A phone alarm for the expected end time, so you can stop the node by hand.
+    - A hard stop timed a bit after the expected end, plus a 30-minute idle-GPU guard.
+    - A hard stop at exactly 5 hours, so not a minute is wasted after training.
+  correct: 2
+  explanation: >-
+    The idle guard catches the normal finish and crashes that free the GPU; a hard stop with some margin
+    catches hangs that keep the GPU busy. A stop at exactly 5 hours would kill a run that is slightly slow.
+- id: q7
+  question: >-
+    Your benchmark gives an MFU of 18% for `baseline_124m` on a host where `gpu_check.py` passed. Which
+    cause is most likely?
+  options:
+    - The R2 bucket is too slow to feed the GPU during the benchmark.
+    - The 6ND formula overestimates FLOPs by about 2× for small models.
+    - The host's NVLink is broken, which `gpu_check.py` cannot detect on one GPU.
+    - A config setting such as compile off, fp32 or a very small micro-batch.
+  correct: 3
+  explanation: >-
+    On a healthy H100 the usual reasons for very low MFU are in the config. Shards are local during
+    the benchmark, 6ND slightly underestimates FLOPs, and NVLink is irrelevant on one GPU.
+- id: q8
+  question: >-
+    The revised budget shows the main run at $194 and a subtotal of $342 against the $500 cap. A friend
+    suggests doubling the main run to 40B tokens "since there is $158 left". What is the best answer?
+  options:
+    - Agree; the contingency exists to be used on the most important run.
+    - Agree, but only if the run uses interruptible GPUs to stay under the cap.
+    - Decline; doubling D adds about $194 and leaves no margin for failures.
+    - Decline, because a 350M model cannot learn anything from more than 20B tokens.
+  correct: 2
+  explanation: >-
+    Main-run cost scales linearly with tokens, so 40B adds roughly another $194 and pushes the subtotal
+    to about $536, over the cap with zero contingency for crashes or price changes.
+- id: q9
+  question: >-
+    A B200 benchmark of `main_350m` shows 330,000 tokens/s per GPU at $7.99/h; the H100 shows 175,000
+    at $4.39/h. Which GPU is cheaper per billion tokens?
+  options:
+    - The H100, because it costs about 45% less per hour.
+    - The B200, at about $6.73 vs about $6.97 per billion tokens.
+    - The B200, at about half the H100's cost per billion tokens.
+    - They are equal, because cost per token does not depend on the GPU.
+  correct: 1
+  explanation: >-
+    7.99e9 / (3600 × 330,000) ≈ $6.73 and 4.39e9 / (3600 × 175,000) ≈ $6.97, before scaling. The B200
+    is slightly cheaper per token here, a small edge you then weigh against 8×B200 availability.

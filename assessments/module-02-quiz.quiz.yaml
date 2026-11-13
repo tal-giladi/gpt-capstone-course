@@ -1,0 +1,123 @@
+- id: q1
+  question: >-
+    A friend offers you a 25B-token "cleaned web" dump they scraped themselves, with no license
+    file, and says it is better than FineWeb-Edu. You intend to publish your model. What is the main
+    reason to stay with FineWeb-Edu?
+  options:
+    - The friend's dump would need a tokenizer retrained from scratch before you could use it.
+    - Its known license and documented pipeline let you say exactly what you trained on.
+    - Hugging Face refuses uploads of models trained on data that is not hosted on the Hub.
+    - Unlicensed text cannot be stored in R2, because Cloudflare scans buckets for copyrighted data.
+  correct: 1
+  explanation: >-
+    A published model needs a data story you can stand behind: a known license, attribution and a
+    documented filtering pipeline. An unlicensed private scrape gives you none of that, whatever
+    its quality.
+- id: q2
+  question: >-
+    You decide the main run should use 30B tokens instead of 20B. Using about 2.86 GB of parquet per
+    billion GPT-2 tokens, 2.15 GB per file and a 12% margin for your own tokenizer, how many
+    `sample/100BT` files do you need?
+  options:
+    - About 14 files, since the margin is already built into the 2.86 GB figure.
+    - About 30 files, the same as before, because the margin covers the extra tokens.
+    - About 140 files, because only the full subset is a random sample of the corpus.
+    - About 45 files, roughly 96 GB of parquet.
+  correct: 3
+  explanation: >-
+    30 × 2.86 GB × 1.12 ≈ 96 GB, and 96 / 2.15 ≈ 44.7, so 45 files. Any prefix of the sample files is
+    still a random slice, so you do not need all 140.
+- id: q3
+  question: >-
+    Your baseline uses `sample/10BT` and the main run uses the first 30 files of `sample/100BT`. A
+    reviewer points out that the card says the 10BT sample was drawn from the 100BT sample. What is
+    the correct consequence?
+  options:
+    - The runs share some training text; fine, but keep validation text out of both sets.
+    - The baseline result is invalid, because the main run will have seen its validation data.
+    - You must delete the overlapping documents from the main run before tokenizing it.
+    - Nothing, since the 30 files you chose are guaranteed to contain none of the 10BT documents.
+  correct: 0
+  explanation: >-
+    Overlap between two training sets is fine. What matters is that the held-out validation split and
+    benchmark checks in Module 3 are built so no validation text appears in either training set.
+- id: q4
+  question: >-
+    You expect to store 180 GB for three months and to pull ~400 GB of shards to GPU boxes at three
+    different providers. B2 storage is about half the price of R2. Why does the course still pick R2?
+  options:
+    - B2 does not support the S3 API, so rclone and boto3 cannot use it.
+    - B2 deletes objects that are not read for 30 days on pay-as-you-go accounts.
+    - R2 egress is free with no cap; B2's free egress stops at three times your stored data.
+    - R2 is faster than B2 for files over 1 GB because it stores them on GPU-attached SSDs.
+  correct: 2
+  explanation: >-
+    Both are S3-compatible and both would work. The difference is about $1.30 a month in storage
+    versus an egress allowance that, with restarts and extra boxes, you could exceed; free egress
+    removes that risk.
+- id: q5
+  question: >-
+    On a rented 8×H100 node you need to pull 65 GB of token shards. Your `r2.env` is on your laptop.
+    What is the safest way to give the node access?
+  options:
+    - Bake `r2.env` into a custom Docker image so every new node starts ready to go.
+    - Commit `r2.env` to a private GitHub repo and clone it on the node.
+    - Paste the key and secret into the provider's public template description for reuse.
+    - Copy it with `scp` to a `chmod 600` file on the node and delete the node when done.
+  correct: 3
+  explanation: >-
+    `scp` sends it over an encrypted channel straight to the one machine that needs it, and the file
+    disappears with the node. Images, repos and templates get copied, cached and shared far beyond
+    one machine.
+- id: q6
+  question: >-
+    You run `rclone copy` with a new bucket-scoped token and get `AccessDenied`. A colleague suggests
+    switching the token to "Admin Read & Write, all buckets" to make it work. What do you answer?
+  options:
+    - Agree, because object-level tokens cannot perform multipart uploads of large files.
+    - Disagree; set `no_check_bucket` so rclone stops asking for bucket-level permissions.
+    - Agree, but only for the day of the upload, then scope it back down afterwards.
+    - Disagree; R2 needs a separate token per prefix, so create one for `raw/` instead.
+  correct: 1
+  explanation: >-
+    The error comes from rclone trying to check or create the bucket, which a bucket-scoped token may
+    not do. `no_check_bucket = true` fixes it without giving the key power over other buckets.
+- id: q7
+  question: >-
+    Halfway through the download your SSH session drops. You had started the downloads directly in
+    the SSH shell, not in tmux. What happened, and what do you do?
+  options:
+    - They were killed with the shell; rerun them in tmux and finished files are skipped.
+    - The downloads keep running in the background; reconnect and wait for them to finish.
+    - The provider stopped the box because no session was attached; restart it.
+    - Every downloaded file is now corrupt; delete the folder and start from zero.
+  correct: 0
+  explanation: >-
+    Processes started in an SSH shell get a hangup signal when it closes. Rerunning the download
+    skips complete files, and the manifest check afterwards catches any partial one.
+- id: q8
+  question: >-
+    The manifest for `sample/100BT` shows `missing` for all 30 files, yet `du -sh data/raw` shows
+    about 65 GB. What is the most likely cause?
+  options:
+    - The Hub changed every file since you downloaded them, so their names no longer match.
+    - The sha256 check is too slow, so the script marked unhashed files as missing.
+    - The files are in a nested folder such as `sample/100BT/` under your `--dir`.
+    - The manifest only works for `sample/10BT`, which is why every file is reported missing.
+  correct: 2
+  explanation: >-
+    "missing" means no file with that name exists directly in `--dir`. Downloads often keep the repo
+    path, so point `--dir` at the folder that really contains the `.parquet` files.
+- id: q9
+  question: >-
+    It is Friday evening. Upload and `rclone check` are done, but you have not yet filled in the data
+    card. You will be away until Monday. What do you do with the Hetzner server?
+  options:
+    - Power it off and finish on Monday; a powered-off server costs nothing.
+    - Delete it now; the manifests are what the data card needs, so copy them off first.
+    - Leave it running over the weekend, because you may need to re-check the files.
+    - Shrink it to the smallest server type over the weekend, which keeps the disk for free.
+  correct: 1
+  explanation: >-
+    Hetzner bills until a server is deleted, powered off or not, and resizing keeps billing too. With
+    the manifests copied off, everything the data card needs is safe and the box can go.

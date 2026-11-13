@@ -1,0 +1,58 @@
+- id: q1
+  question: >-
+    You want about 20B tokens of your own 32k BPE tokenizer for the main run. FineWeb-Edu
+    `sample/100BT` files are about 2.15 GB each and the subset holds roughly 2.86 GB of parquet per
+    billion GPT-2 tokens. How many files do you download?
+  options:
+    - 27 files, because 20B tokens at 2.86 GB per billion is about 57 GB and no margin is needed.
+    - 30 files, about 65 GB, because your tokenizer's count can differ from GPT-2's by around 10%.
+    - 10 files, because the parquet is compressed and expands about three times when tokenized.
+    - All 140 files, because a prefix of the sample would not be a random subset of the corpus.
+  correct: 1
+  explanation: >-
+    57 GB covers exactly 20B GPT-2 tokens, but your own tokenizer will not produce exactly the
+    same count, so you add a margin of about 10-15%. The sample files are already in random order,
+    so a prefix of them is still a fair random slice.
+- id: q2
+  question: >-
+    A teammate suggests training the main run on unfiltered FineWeb instead of FineWeb-Edu "so the
+    model sees more varied text". For a 350M model on 20B tokens judged on HellaSwag, ARC and PIQA,
+    what is the strongest argument for keeping FineWeb-Edu?
+  options:
+    - FineWeb has a non-commercial license, so a published model trained on it would be restricted.
+    - FineWeb has no small ready-made samples, so you would have to cut a 20B-token subset yourself.
+    - At a fixed small token budget, the edu-filtered text gives clearly better knowledge and reasoning scores.
+    - FineWeb-Edu is deduplicated across dumps while FineWeb still contains many exact copies of pages.
+  correct: 2
+  explanation: >-
+    Both are ODC-By and both ship 10B/100B/350B samples. The FineWeb paper's ablations show the
+    edu-filtered subset scoring much higher on knowledge and reasoning benchmarks at the same token
+    count, which matters most when the budget is only 20B tokens.
+- id: q3
+  question: >-
+    You plan to publish your model weights on Hugging Face. Which statement about FineWeb-Edu's
+    terms is correct?
+  options:
+    - It is allowed; attribute the dataset and follow the Common Crawl terms of use as well.
+    - It needs written permission from Hugging Face, because ODC-By only covers research use.
+    - It is allowed only if you also publish the exact parquet files you trained on.
+    - It is allowed without attribution, because a model is not a copy of the dataset.
+  correct: 0
+  explanation: >-
+    ODC-By permits any use, including commercial, with attribution when you share the data or a
+    derived database, and the card adds the Common Crawl Terms of Use. Naming the dataset in your
+    model card is the expected practice.
+- id: q4
+  question: >-
+    While streaming 2,000 documents you find several with `int_score` equal to 1 and 2. What is the
+    most likely explanation?
+  options:
+    - The edu classifier is noisy, so a few low-score pages always leak into the score-3 subset.
+    - The `int_score` column is rounded down, so pages scoring 2.6 show as 2 but were kept.
+    - Streaming reads the newest Common Crawl dump first, which has not been filtered yet.
+    - You streamed the wrong repo, such as FineWeb or FineWeb-Edu score-2, instead of FineWeb-Edu.
+  correct: 3
+  explanation: >-
+    FineWeb-Edu keeps only pages with a score of 3 or more, so every row has `int_score` of at
+    least 3. Lower values mean you are reading a different dataset, which would silently change
+    your experiment.

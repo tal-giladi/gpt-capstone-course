@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    Your bucket will hold about 180 GB for three months, and you expect to pull about 400 GB of
+    token shards to GPU boxes at RunPod, Lambda and Vast.ai. Why is R2 the better choice than AWS
+    S3 Standard here?
+  options:
+    - S3 cannot be used with rclone from machines outside AWS without a VPN.
+    - R2 stores data on SSDs, so each GPU box reads shards several times faster.
+    - S3 storage alone would cost about ten times more per month than R2.
+    - R2 charges nothing for egress, while S3 would bill roughly $26 for that traffic.
+  correct: 3
+  explanation: >-
+    Storage cost is similar (about $2.55 vs $4 a month); the difference is egress. S3 charges about
+    $0.09/GB after the first 100 GB a month, while R2 egress is free regardless of where the reader is.
+- id: q2
+  question: >-
+    You created an R2 token scoped to the bucket `mygpt`. `rclone copy file r2:mygpt/tmp/` fails with
+    `AccessDenied`, although the keys are correct. What do you change?
+  options:
+    - Set `RCLONE_CONFIG_R2_NO_CHECK_BUCKET=true` so rclone stops trying to create or check the bucket.
+    - Give the token Admin Read & Write on all buckets, because object tokens cannot upload files.
+    - Change the region from `auto` to the nearest Cloudflare region such as `weur`.
+    - Append `/mygpt` to the endpoint URL so the token is matched to the right bucket.
+  correct: 0
+  explanation: >-
+    A bucket-scoped token may read and write objects but not list or create buckets; rclone checks
+    the bucket first unless `no_check_bucket` is set. Widening the token's scope would work but
+    gives up the protection you created it for.
+- id: q3
+  question: >-
+    You want the bucket to mirror a local folder of new token shards. A teammate types
+    `rclone sync ./tok r2:mygpt/`. What happens?
+  options:
+    - The new shards are added and nothing else changes, since sync only uploads new files.
+    - Every object in the bucket that is not in `./tok`, such as raw data and checkpoints, is deleted.
+    - Rclone refuses to run, because sync to a bucket root always needs `--force`.
+    - The shards are uploaded and older versions of other files are moved to an R2 recycle bin.
+  correct: 1
+  explanation: >-
+    `sync` makes the destination identical to the source, deleting extra files, and R2 has no
+    recycle bin. Use `rclone copy`, target the exact prefix (`r2:mygpt/tok/...`), and use
+    `--dry-run` before any sync.
+- id: q4
+  question: >-
+    You notice that your filled-in `r2.env` was pushed to your public GitHub repo an hour ago. What
+    is the right first step?
+  options:
+    - Rewrite the git history with a force push, so the file disappears from GitHub.
+    - Make the repository private, then check the R2 access log for unknown requests.
+    - Delete the token in Cloudflare, then create a new one and clean up the repo.
+    - Rename the bucket, so that the leaked token no longer points at your data.
+  correct: 2
+  explanation: >-
+    Once pushed, the secret must be treated as stolen; scrapers find keys within minutes and copies
+    survive history rewrites. Revoking the token is the only step that actually stops its use.

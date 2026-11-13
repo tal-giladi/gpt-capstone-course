@@ -1,0 +1,48 @@
+# TEMPLATE for your main run (~350M params, ~20B tokens, 8 GPUs). Replace the switches
+# below with the recipe your ablations chose in Module 6; this file shows one plausible
+# result (RoPE + RMSNorm + SwiGLU + QK-norm, no bias, Muon), which exports to Qwen3ForCausalLM.
+# Params: 24 x (4*1024^2 + 3*1024*2752) + 32768*1024 ~= 337M.
+#   torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/main_350m.yaml
+model:
+  vocab_size: 32768
+  n_layer: 24
+  n_head: 16
+  n_embd: 1024
+  block_size: 1024           # raise to 2048 only if your context ablation paid off
+  dropout: 0.0
+  pos_emb: rope
+  rope_theta: 10000.0
+  norm: rmsnorm
+  mlp: swiglu                # hidden = 8/3 * 1024 rounded up to 64 = 2752
+  qk_norm: true
+  bias: false
+  tie_embeddings: true
+
+train:
+  data_dir: data/fineweb_edu_100B_own32k
+  train_tokens: 20_000_000_000  # 38146 steps
+  total_batch_tokens: 524288
+  micro_batch_size: 32       # 32 x 1024 x 8 GPUs -> accum 2
+  seq_len: 1024
+  lr: 6.0e-4                 # AdamW lr (embeddings, head, norms)
+  min_lr_ratio: 0.0
+  warmup_tokens: 250_000_000
+  schedule: wsd
+  decay_frac: 0.2
+  optimizer: muon
+  muon_lr: 0.02
+  weight_decay: 0.0
+  grad_clip: 1.0
+  dtype: bf16
+  compile: true
+  seed: 1337
+  out_dir: runs/main_350m
+  run_name: main_350m
+  eval_every: 500
+  eval_tokens: 10_485_760
+  hellaswag_every: 2000
+  ckpt_every: 1000
+  keep_last: 3
+  ckpt_remote: ""            # set this! e.g. r2:my-gpt-bucket/checkpoints/main_350m
+  wandb_project: ""
+  log_every: 10

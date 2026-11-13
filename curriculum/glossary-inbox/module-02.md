@@ -1,0 +1,19 @@
+- **FineWeb-Edu** — Hugging Face's English web corpus (1.3T GPT-2 tokens) filtered from FineWeb by a classifier trained on Llama-3-70B-Instruct educational-value ratings; keeps pages with rounded score >= 3. ODC-By license.
+- **ODC-By** — Open Data Commons Attribution License 1.0: any use of a database, including commercial, as long as you attribute it when you share it or a derived database.
+- **Common Crawl Terms of Use** — terms attached to all Common Crawl-derived corpora, accepted in addition to the dataset's own license.
+- **int_score** — FineWeb-Edu column: the classifier's educational score rounded to an integer 0-5; every row in FineWeb-Edu has 3 or more.
+- **Parquet** — columnar, compressed file format used by Hugging Face datasets; FineWeb-Edu ships ~2.15 GB parquet files.
+- **Dataset revision** — the git commit sha of a Hugging Face dataset repo; pinning it makes a download reproducible.
+- **Manifest** — a file listing every data file with size and sha256 at a pinned revision, used to verify and document what you trained on.
+- **Data card** — a short document stating a dataset's source, license, size, revision, known properties and risks; cited by the model card.
+- **Object storage** — storage for whole files ("objects") in buckets, accessed over HTTP with an API such as S3, rather than as a mounted disk.
+- **S3-compatible API** — the Amazon S3 protocol implemented by other providers (Cloudflare R2, Backblaze B2, Hugging Face buckets), so the same tools work everywhere.
+- **Egress** — data transferred out of a provider's network; often billed per GB, free on Cloudflare R2.
+- **Cloudflare R2** — S3-compatible object storage with no egress fees ($0.015/GB-month Standard, checked 2026-11-13).
+- **Backblaze B2** — S3-compatible object storage at $6.95/TB-month with free egress up to 3× stored data (checked 2026-11-13).
+- **Bucket-scoped token** — an access key limited to the objects of one bucket; it cannot list or create buckets.
+- **rclone** — command-line tool that copies, checks and syncs files between local disks and dozens of storage backends.
+- **rclone copy vs sync** — `copy` only adds and updates files at the destination; `sync` also deletes destination files that are missing at the source.
+- **Multipart upload** — splitting a large object into chunks uploaded in parallel; tuned in rclone with `--s3-chunk-size` and `--s3-upload-concurrency`.
+- **Xet** — Hugging Face's chunk-deduplicating storage and transfer backend; `hf_xet` is the default download client since huggingface_hub 1.0 (`HF_XET_HIGH_PERFORMANCE=1` to go faster).
+- **tmux** — terminal multiplexer that keeps processes running after an SSH connection drops (`tmux attach` to return).
