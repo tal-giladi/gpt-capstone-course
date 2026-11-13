@@ -33,6 +33,7 @@ post = [
 ]
 eval = ["lm-eval[hf]>=0.4.13,<0.5"]   # [hf] pulls transformers/accelerate/peft for --model hf
 demo = ["gradio>=6.32,<7"]
+trackio = ["trackio>=0.33,<1"]   # free W&B alternative: train.tracker=trackio
 dev = ["pytest>=9.2,<10"]
 
 [tool.setuptools]

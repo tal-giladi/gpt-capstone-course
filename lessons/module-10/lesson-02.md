@@ -21,6 +21,18 @@ sources:
     url: https://huggingface.co/docs/trl/dpo_trainer
   - title: "SmolLM2-360M-Instruct model card (MT-Bench, IFEval reference numbers)"
     url: https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct
+  - title: "Gemini API pricing (gemini-3.1-pro-preview, gemini-3.8-flash; free tier, batch -50%)"
+    url: https://aistudio.google.com/docs/pricing
+  - title: "Gemini API: OpenAI compatibility (base URL)"
+    url: https://ai.google.dev/gemini-api/docs/openai
+  - title: "OpenRouter: openai/gpt-oss-120b (per-provider prices, base URL)"
+    url: https://openrouter.ai/openai/gpt-oss-120b
+  - title: "Groq docs: OpenAI compatibility (base URL)"
+    url: https://console.groq.com/docs/openai
+  - title: "Groq pricing 2026 (gpt-oss-120b $0.15/$0.60; third-party tracker)"
+    url: https://www.cloudzero.com/blog/groq-pricing/
+  - title: "vLLM recipes: gpt-oss-120b (single 80 GB GPU)"
+    url: https://docs.vllm.ai/projects/recipes/en/latest/OpenAI/GPT-OSS.html
 last_verified: "2026-11-13"
 ---
 
@@ -34,8 +46,8 @@ You have `judge/final/winrate.json` and `judge/final/notes.md` for the DPO model
 
 ## What you need
 
-- `hf/my-gpt-350m-sft/`, `hf/my-gpt-350m-dpo/` and `hf/my-gpt-350m-dpo-b01/` in your bucket from [10.1](lesson-01.md), and `hf/my-gpt-350m-base/` from Module 8.
-- An LLM API account from 01.2 (Anthropic or OpenAI) with a **monthly spend limit of $10** and about $5–10 of prepaid credit.
+- `hf/my-gpt-350m-sft/`, `hf/my-gpt-350m-dpo/` and `hf/my-gpt-350m-dpo-b01/` in your bucket from [10.1](lesson-01.md), and `hf/my-gpt-350m-base/` from [07.3](../module-07/lesson-03.md) (evaluated in Module 8).
+- An LLM API account from 01.2 (Anthropic or OpenAI; Google Gemini or an OpenAI-compatible host such as OpenRouter or Groq work too, see the judge table) with a **monthly spend limit of $10** and about $5–10 of prepaid credit. No account is needed if you self-host the judge on the pod.
 - The [Module 10 lab files](../../labs/module-10/) in `tools/`, committed.
 - A 1× H100 pod for ~1.2 h (answer generation and lm-eval), then your laptop.
 - **Expected cost: ~$7–8**: ~$3.25 GPU (Community $2.69/h) plus ~$4.10 of judge API calls.
@@ -57,6 +69,10 @@ Each prompt costs two judge calls (both orders). For 200 prompts with answers of
 | OpenAI `gpt-6.1-sol` | $2.00 / $10.00 | ~$2.00 | ~$1.00 | If your account is OpenAI |
 | OpenAI `gpt-6-luna` | $0.10 / $0.50 | ~$0.10 | ~$0.05 | Cheap OpenAI judge |
 | OpenAI `gpt-5-nano` | $0.05 / $0.40 | ~$0.07 | ~$0.04 | Cheapest listed |
+| Google `gemini-3.1-pro-preview` (OpenAI-compatible endpoint) | $2.00 / $12.00 | ~$2.30 | ~$1.15 | Strong judge from a third company; thinking cannot be switched off, so output tokens may run above the estimate |
+| Google `gemini-3.8-flash` | $0.75 / $3.75 until 2026-12-31, then $1.50 / $7.50 | ~$0.75 | ~$0.40 | Cheap selection judge; has a free tier with rate limits |
+| `openai/gpt-oss-120b` (open weights) via OpenRouter or Groq | ~$0.15 / $0.60 (varies by OpenRouter provider; Groq rate from third-party trackers) | ~$0.13 | | Cheapest hosted option; a weaker judge than the frontier models, so report it as such |
+| `openai/gpt-oss-120b` self-hosted with vLLM on your eval H100 | $0 API; ~0.3–0.5 h of the pod (download ~65 GB, load, judge) ≈ $0.80–1.35 at $2.69/h (ESTIMATE) | ~$1 | | No API account at all; fits on one 80 GB GPU; must run before you terminate the pod |
 
 `judge_winrate.py` calls the standard (non-batch) endpoints, so plan with the standard column. With Anthropic it sends `effort: low` (a verdict needs little reasoning) and the server-side refusal fallback; for Haiku 5.5 a declined request simply stays declined and is counted as `invalid`. `summary.json` splits `invalid` into `invalid_declined` (the judge refused) and `invalid_no_verdict` (a reply without `[[A]]`/`[[B]]`/`[[TIE]]`), and records the judge's real `judge_input_tokens`, `judge_output_tokens` and the `estimated_cost_usd` they imply at the list prices above.
 
@@ -140,7 +156,7 @@ bash scripts/sync.sh push judge ckpt/dpo_350m/judge && bash scripts/sync.sh push
 No change beyond 2 standard errors against the first model.
 ```
 
-When the push has finished, terminate the pod. Everything else runs on your laptop.
+When the push has finished, terminate the pod (Vast.ai: `vastai destroy instance <ID>`; Lambda, Hyperbolic: the dashboard). Everything else runs on your laptop. Exception: if you self-host the judge (step 4), keep the pod and run steps 3–5 on it.
 
 ### 3. Estimate the bill from the real answers (laptop, 5 min)
 
@@ -163,7 +179,26 @@ python tools/judge_tools.py report judge/haiku_dpo/judgments.jsonl --out judge/h
 python tools/judge_tools.py report judge/haiku_b01/judgments.jsonl --out judge/haiku_b01
 ```
 
-With OpenAI instead: `--judge openai --judge-model gpt-6-luna`. Keep `--n 200` and the default `--seed 0` exactly as in step 1, otherwise the prompt list does not match the answer files. Ship the DPO variant with the higher win rate; if both intervals overlap heavily, prefer the one with fewer invalid verdicts and shorter answers (the gentler change).
+With OpenAI instead: `--judge openai --judge-model gpt-6-luna`. With any other OpenAI-compatible provider, put that provider's key in `OPENAI_API_KEY` for this shell, add `--judge openai --base-url <endpoint> --judge-model <id>`, and pass the list price so `summary.json` gets a cost (the script has no built-in price for them):
+
+| Provider | `--base-url` | Example `--judge-model` | `--price-in` / `--price-out` |
+|---|---|---|---|
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai/` | `gemini-3.8-flash` (select), `gemini-3.1-pro-preview` (report) | 0.75 / 3.75, 2 / 12 |
+| OpenRouter | `https://openrouter.ai/api/v1` | `openai/gpt-oss-120b` | the price shown for the provider it routes to |
+| Groq | `https://api.groq.com/openai/v1` | `openai/gpt-oss-120b` | 0.15 / 0.60 |
+| Self-hosted vLLM (on the pod, before step 2's terminate) | `http://localhost:8000/v1` | `openai/gpt-oss-120b` | 0 / 0 |
+
+For the self-hosted judge, install vLLM in its own venv so it does not change the project's pinned torch, then run the judge commands on the pod with `OPENAI_API_KEY=local`:
+
+```bash
+uv venv /opt/vllm && uv pip install --python /opt/vllm/bin/python vllm
+tmux new -d -s judge "/opt/vllm/bin/vllm serve openai/gpt-oss-120b --max-model-len 8192 --gpu-memory-utilization 0.92"
+curl -s localhost:8000/v1/models     # wait until it lists the model (download + load ~10-20 min)
+```
+
+The idle guard counts GPU utilization, and the GPU is idle during the download: restart the guard with `--idle-minutes 40` first, and terminate the pod yourself when the final judge run (step 5) is done.
+
+Keep `--n 200` and the default `--seed 0` exactly as in step 1, otherwise the prompt list does not match the answer files. Ship the DPO variant with the higher win rate; if both intervals overlap heavily, prefer the one with fewer invalid verdicts and shorter answers (the gentler change).
 
 ### 5. Measure the chosen model with the strong judge (20 min, ~$4)
 

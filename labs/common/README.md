@@ -67,6 +67,7 @@ bash scripts/autoshutdown.sh --idle-minutes 20 --grace-minutes 10 &  # --stop-cm
 python scripts/bench.py --config configs/baseline_124m.yaml --price-per-gpu-hour 2.99 --json bench.jsonl
 python -m mygpt.train --config configs/smoke_cpu.yaml                                     # CPU smoke test, < 1 min
 torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/baseline_124m.yaml train.wandb_project=my-gpt   # W&B alerts on NaN stop / finish (train.wandb_alerts=false: off)
+# free alternative tracker: pip install -e ".[trackio]" and add train.tracker=trackio (same project key; no alerts)
 python -m mygpt.train --config configs/ablation_base.yaml model.pos_emb=rope train.out_dir=runs/abl_rope train.run_name=abl_rope
 python -m mygpt.evaluate --ckpt runs/baseline_124m --hellaswag -1                         # file or run dir; --eval-tokens all --batch 16
 python -m mygpt.export_hf --ckpt runs/main_350m --out hf/my-gpt-350m                      # --push you/my-gpt-350m: upload to a PRIVATE repo

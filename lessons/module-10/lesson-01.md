@@ -27,6 +27,10 @@ sources:
     url: https://github.com/huggingface/alignment-handbook/tree/main/recipes/smollm2
   - title: "SmolLM2: When Smol Goes Big (paper, DPO on UltraFeedback)"
     url: https://arxiv.org/pdf/2502.02737
+  - title: "Lambda instance pricing (1x H100 SXM $4.89 from 2026-11-16)"
+    url: https://lambda.com/service/gpu-cloud/pricing
+  - title: "Hyperbolic GPU marketplace (H100 SXM from $3.19/GPU-h)"
+    url: https://www.hyperbolic.ai/marketplace
 last_verified: "2026-11-13"
 ---
 
@@ -41,7 +45,7 @@ You have two DPO models in your bucket: `hf/my-gpt-350m-dpo/` (the SmolLM2-360M 
 ## What you need
 
 - `hf/my-gpt-350m-sft/` from [09.2](../module-09/lesson-02.md) in your bucket, and the Module 9 tools (`sft_data_stats.py`, `probe_chat.py`) in `tools/`.
-- A 1× H100 pod from your `mygpt-gpu` template (the one from 09.2 if it is still running), with `pip install -e ".[post,eval]"`.
+- A 1× H100 pod from your `mygpt-gpu` template (the one from 09.2 if it is still running), or a 1× H100 at one of the alternatives in [09.1](../module-09/lesson-01.md), with `pip install -e ".[post,eval]"`.
 - About 2 hours wall clock, ~1–1.5 h on the GPU.
 - **Expected cost: ~$3–4** on Community Cloud at $2.69/h (~$5–7 on Secure at $4.39/h). The data is free.
 
@@ -112,13 +116,13 @@ Total compute per token is about $6N$ for the policy plus $2N$ for the reference
 | **Total** | **~1.3–1.7 h** | **~$3.50–4.60** | **~$5.75–7.50** |
 
 > [!NOTE]
-> Re-check the H100 price on the RunPod deploy page and put the measured hours into `budget.md` after each run.
+> Re-check the H100 price on the RunPod deploy page and put the measured hours into `budget.md` after each run. On the alternatives from 09.1's box table the same ~1.3–1.7 h cost about $3–4 on a Vast.ai host at the ~$2.40 median, $4–5.50 on Hyperbolic ($3.19) and $6.40–8.30 on Lambda ($4.89); set the box up and stop it as in 09.2 step 1.
 
 ## Do this
 
 ### 1. Box, stops, models (10 min)
 
-On a fresh pod (skip what is already done if you kept the 09.2 pod):
+On a fresh pod (skip what is already done if you kept the 09.2 pod; on another provider, source `r2.env` first and pass its stop command to the hard stop and to `autoshutdown.sh --stop-cmd`, as in 09.2 step 1):
 
 ```bash
 nohup bash -c 'sleep 3h; runpodctl pod stop $RUNPOD_POD_ID' >/tmp/hardstop.log 2>&1 &

@@ -54,3 +54,16 @@
   explanation: >-
     Everything on the node goes silent with the node. W&B notices missing heartbeats from outside and
     marks the run crashed, which can email you; the hard stop and the idle guard only stop billing.
+- id: q5
+  question: >-
+    RunPod has no 8×H100 SXM node today, so you rent a verified Vast.ai host instead. What must change
+    in the launch steps before the run starts?
+  options:
+    - Nothing; autoshutdown.sh detects the provider and calls its stop API by itself.
+    - Only the price in budget.md, since every provider stops billing on an OS shutdown.
+    - The bucket remote, because R2 cannot be reached from Vast.ai hosts without a VPN.
+    - Both stop guards get the vastai stop command, and you source r2.env by hand.
+  correct: 3
+  explanation: >-
+    Without a RunPod pod ID, autoshutdown.sh falls back to an OS shutdown, which does not stop Vast.ai
+    billing, and there is no template to inject the bucket secrets. The bucket itself works from any host.

@@ -25,6 +25,8 @@ sources:
     url: https://papers.neurips.cc/paper/2020/hash/1457c0d6bfcb4967418bfb8ac142f64a-Abstract.html
   - title: "Dror et al., The Hitchhiker's Guide to Testing Statistical Significance in Natural Language Processing (ACL 2018; bootstrap and paired tests)"
     url: https://aclanthology.org/P18-1128/
+  - title: "Hetzner Cloud regular-performance (CPX) prices"
+    url: https://www.hetzner.com/cloud/regular-performance/
 last_verified: "2026-11-13"
 ---
 
@@ -41,7 +43,7 @@ One table, `reports/eval_table.md`, with your 350M model, your 124M baseline, Op
 - The 1×H100 pod from [08.1](lesson-01.md) still running, with `evals/my-gpt-350m-base/` and `evals/baseline-124m/`.
 - The common val sets `tok/common-val-gpt2/` and `tok/common-val-bpe32k/` and `TOKEN_REPORT.md` from [03.3](../module-03/lesson-03.md); the main checkpoint in `r2:mygpt/ckpt/main_350m/` from [07.3](../module-07/lesson-03.md).
 - About 1.5 hours, ~1 hour of it on the pod.
-- **Expected cost: ~$3** (about 1 h at $2.69/h, checked 2026-11-13). Optional extra contamination scan: ~$1 on a Hetzner CPU box.
+- **Expected cost: ~$3** (about 1 h at $2.69/h, checked 2026-11-13). Optional extra contamination scan: ~$0.40–1 on a Hetzner CPU box, or $0 on your laptop.
 
 ## Choices and costs
 
@@ -166,7 +168,13 @@ Read the comparison blocks row by row. For each task write one sentence in your 
 
 ### 5. Contamination statement (15 min, optional scan ~2 h unattended)
 
-Copy the HellaSwag/ARC/PIQA numbers (items with an overlap, documents removed, share of tokens) for both shard sets from `TOKEN_REPORT.md` into `reports/contamination.md`. For WinoGrande and LAMBADA, either write "not checked", or scan for them on a cheap CPU box as in 03.3 (Hetzner CPX62, ~€0.18/h), on the **filtered** training shards:
+Copy the HellaSwag/ARC/PIQA numbers (items with an overlap, documents removed, share of tokens) for both shard sets from `TOKEN_REPORT.md` into `reports/contamination.md`. For WinoGrande and LAMBADA, either write "not checked", or scan for them on a cheap CPU box as in 03.3, on the **filtered** training shards. Any of these works; the box needs ~70 GB of disk for both shard sets:
+
+| Box | Price (checked 2026-11-13) | Note |
+|---|---|---|
+| **Hetzner CPX62** (16 vCPU), as in 03.3 | ~€0.18/h, ~$0.40 for ~2 h | Recommended; delete the server afterwards (a powered-off server still bills) |
+| The H100 pod you already have | its hourly price, ~$5 for 2 h at $2.69/h | Only if you would keep it running anyway; otherwise far dearer for CPU work |
+| Your laptop | $0 | Works if you have the disk and can leave it running; pulling ~65 GB from R2 costs no egress |
 
 ```bash
 python scripts/decontam.py --shards-or-parquet data/tok/bpe32k-100BT-30 --tokenizer data/tok/bpe32k-100BT-30 \
@@ -186,7 +194,7 @@ bash scripts/sync.sh push evals ckpt/main_350m/evals
 git add reports/ logs/lmeval-*.log evals/*/*/results_*.json && git commit -m "Eval: GPT-2 references, bpb, contamination" && git push
 ```
 
-RunPod console → the pod → **Terminate**.
+RunPod console → the pod → **Terminate** (Vast.ai: `vastai destroy instance <ID>`; Lambda, Hyperbolic: terminate in the dashboard).
 
 ## How you know it worked
 

@@ -73,7 +73,8 @@ class TrainConfig:
     ckpt_every: int = 1000
     keep_last: int = 3
     ckpt_remote: str = ""             # rclone remote path, e.g. r2:my-bucket/ckpt/run1 ("" = off)
-    wandb_project: str = ""           # "" = off
+    wandb_project: str = ""           # tracker project name; "" = no live tracker (log.jsonl only)
+    tracker: str = "wandb"            # wandb | trackio | none
     wandb_alerts: bool = True         # with wandb on: run.alert() on a NaN stop and when the run finishes
     log_every: int = 10
     skip_batches: int = 0             # on resume, advance the loader this many global batches (optimizer steps)

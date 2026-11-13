@@ -27,6 +27,12 @@ sources:
     url: https://github.com/huggingface/alignment-handbook/tree/main/recipes/smollm2
   - title: "TRL 1.17 SFT Trainer docs (assistant_only_loss, packing, max_length)"
     url: https://huggingface.co/docs/trl/sft_trainer
+  - title: "Lambda instance pricing (1x H100 SXM $4.89 from 2026-11-16)"
+    url: https://lambda.com/service/gpu-cloud/pricing
+  - title: "Hyperbolic GPU marketplace (H100 SXM from $3.19/GPU-h)"
+    url: https://www.hyperbolic.ai/marketplace
+  - title: "Vast.ai pricing 2026 (H100 SXM from $1.73, median $2.40; third-party snapshot)"
+    url: https://www.spheron.network/blog/vastai-pricing-2026/
 last_verified: "2026-11-13"
 ---
 
@@ -40,7 +46,7 @@ You have a written data decision in `reports/sft_data.md`: the SFT dataset and i
 
 ## What you need
 
-- Your exported base model in the bucket under `hf/my-gpt-350m-base/` (from Module 8), and `r2.env` from [02.2](../module-02/lesson-02.md) on your laptop.
+- Your exported base model in the bucket under `hf/my-gpt-350m-base/` (exported in [07.3](../module-07/lesson-03.md), evaluated in Module 8; its `EVAL_REPORT.md` is used again in Module 11), and `r2.env` from [02.2](../module-02/lesson-02.md) on your laptop.
 - Your project repo with the extras installed on your laptop: `pip install -e ".[post]"` (TRL, PEFT, accelerate, judge SDKs; CPU is enough for this lesson).
 - The [Module 9 lab files](../../labs/module-09/) copied into `tools/` and committed.
 - About 70 minutes, ~1.4 GB of disk for the model and a few hundred MB of dataset cache.
@@ -91,16 +97,19 @@ TRL truncates with `keep_start`: a long conversation keeps its first turns and l
 
 The arithmetic is the same $6ND$ as for pretraining: $6 \times 337\text{M params} \times 334\text{M tokens} \times 2\text{ epochs} \approx 1.35 \times 10^{18}$ FLOPs. A Hugging Face Trainer without `torch.compile`, with padded batches, reaches roughly 15–25% MFU on an H100 (ESTIMATE; you measure the real number in the first minutes of 09.2).
 
-| GPU (RunPod) | $/h Community / Secure | SFT, 2 epochs (ESTIMATE) | SFT cost | Notes |
+| GPU (provider) | $/h | SFT, 2 epochs (ESTIMATE) | SFT cost | Notes |
 |---|---|---|---|---|
-| **1× H100 SXM** | $2.69 / $4.39 | ~2–3 h | **~$5–13** | Your `mygpt-gpu` template from 04.2; DPO (10.1) and the evals (10.2) follow on the same box |
-| 1× H100 PCIe | $1.99 / $2.89 | ~2.5–4 h | ~$5–12 | Fine too; ~25% slower |
-| 1× RTX 4090 (24 GB) | $0.34 / $0.89 | ~12–18 h | ~$4–16 | Fits a 350M full fine-tune, but a day of babysitting for no saving |
+| **1× H100 SXM, RunPod** | $2.69 Community / $4.39 Secure | ~2–3 h | **~$5–13** | Your `mygpt-gpu` template from 04.2; DPO (10.1) and the evals (10.2) follow on the same box |
+| 1× H100 PCIe, RunPod | $1.99 / $2.89 | ~2.5–4 h | ~$5–12 | Fine too; ~25% slower |
+| 1× RTX 4090 (24 GB), RunPod | $0.34 / $0.89 | ~12–18 h | ~$4–16 | Fits a 350M full fine-tune, but a day of babysitting for no saving |
+| 1× H100 SXM, Vast.ai verified host | from ~$1.73, median ~$2.40 (marketplace) | ~2–3 h | ~$4–8 | Cheapest; host quality varies; no template, set up as in 08.1 |
+| 1× H100 SXM, Lambda | $4.89 (from 2026-11-16) | ~2–3 h | ~$10–15 | Reliable; terminate in the dashboard |
+| 1× H100 SXM, Hyperbolic | from $3.19 | ~2–3 h | ~$6–10 | Marketplace availability |
 
-Recommendation: **1× H100 SXM from your template**, the same choice as the plan's "SFT + DPO ~6 GPU-h, $25" line. Multi-GPU is not worth it here: a 2-hour job does not justify an 8× node's setup time.
+Recommendation: **1× H100 SXM from your template**, the same choice as the plan's "SFT + DPO ~6 GPU-h, $25" line. Multi-GPU is not worth it here: a 2-hour job does not justify an 8× node's setup time. On another provider, set the box up as in 08.1 step 3 (copy `r2.env`, use that provider's stop command).
 
 > [!NOTE]
-> Prices drift. Before 09.2, re-check the H100 SXM price on the RunPod deploy page and put the price you will actually pay into `budget.md`.
+> Prices drift. Before 09.2, re-check the H100 SXM price on your provider's deploy page and put the price you will actually pay into `budget.md`. RunPod, Lambda and Hyperbolic prices from their pricing pages; Vast.ai from third-party marketplace snapshots.
 
 ## Do this
 

@@ -22,6 +22,14 @@ sources:
     url: https://huggingface.co/openai-community/gpt2
   - title: "RunPod GPU pricing"
     url: https://www.runpod.io/pricing
+  - title: "Lambda instance pricing (1x A10 $1.29, 1x H100 SXM $4.89 from 2026-11-16)"
+    url: https://lambda.com/service/gpu-cloud/pricing
+  - title: "Hyperbolic GPU marketplace (H100 SXM from $3.19/GPU-h)"
+    url: https://www.hyperbolic.ai/marketplace
+  - title: "Vast.ai pricing 2026 (H100 SXM from $1.73, median $2.40; third-party snapshot)"
+    url: https://www.spheron.network/blog/vastai-pricing-2026/
+  - title: "Free cloud GPUs in 2026 (Kaggle ~30 GPU-h/week, T4/P100; third-party)"
+    url: https://gpuperhour.com/blog/free-cloud-gpus-and-credits
 last_verified: "2026-11-13"
 ---
 
@@ -36,7 +44,7 @@ Your training log already holds a HellaSwag number, but it was measured by your 
 ## What you need
 
 - `r2:mygpt/hf/my-gpt-350m-base/` from [07.3](../module-07/lesson-03.md) and `r2:mygpt/ckpt/baseline_124m/` (final checkpoint and log) from [05.3](../module-05/lesson-03.md).
-- The `mygpt-gpu` RunPod template from [04.2](../module-04/lesson-02.md) and RunPod credit.
+- The `mygpt-gpu` RunPod template from [04.2](../module-04/lesson-02.md) and RunPod credit (or credit at one of the alternatives below).
 - The [Module 8 lab files](../../labs/module-08/) copied into `tools/` and committed.
 - On your laptop: the project venv with `pip install -e ".[eval]"` (the extra installs `lm-eval[hf]`, so lm-eval brings its Hugging Face backend: transformers, accelerate, peft).
 - About 1.5 hours, ~45 minutes of it on the GPU box.
@@ -91,10 +99,14 @@ Same weights, three numbers. Rule for this course: **acc_norm** for HellaSwag, A
 | Your laptop CPU | $0 | Pipeline tests with `--limit` (minutes) | The full suite takes many hours per model on a CPU: test only |
 | RunPod Community RTX 4090 (24 GB) | ~$0.34/h | lm-eval for all four models; 08.2's `mygpt.evaluate` with `--batch 16` | Cheap, but slower, and you must remember `--batch 16`: by default `mygpt.evaluate` uses the training micro-batch (64 × 1,024 with a 50k vocabulary for the baseline), which needs more than 24 GB |
 | **RunPod Community 1×H100 SXM (80 GB)** | $2.69/h | Everything in 08.1 and 08.2 | **Recommended**: ~1.5 h for both lessons, ~$4–5 |
+| Vast.ai 1×H100 SXM (verified host) | from ~$1.73/h, median ~$2.40/h (marketplace) | Everything in 08.1 and 08.2 | Cheapest H100; check the host's reliability and CUDA 13 driver; stop with `vastai stop instance <ID>`, finish with `destroy` |
+| Lambda 1×A10 (24 GB) / 1×H100 SXM | $1.29/h / $4.89/h (prices from 2026-11-16) | A10: like the RTX 4090 (`--batch 16`); H100: everything | Reliable; terminate in the dashboard, a `shutdown` does not stop billing |
+| Hyperbolic 1×H100 SXM | from $3.19/h | Everything | Marketplace; availability per supplier |
+| Kaggle / Google Colab free notebook | $0 (Kaggle: ~30 GPU-h/week on T4 or P100, 16 GB) | Pipeline tests only | No native bf16 on T4/P100, so you cannot use the identical settings below; never report numbers from it |
 | 8×H100 | $35/h | | Never for evaluation |
 
 > [!NOTE]
-> Prices from the RunPod pricing page on 2026-11-13. lm-eval version from PyPI on the same day (0.4.13, released 2026-08-31; 0.5.0 exists only as a dev pre-release). Re-check both, and keep the version pinned in `pyproject.toml` for the whole module.
+> Prices from the RunPod, Lambda and Hyperbolic pricing pages on 2026-11-13; Vast.ai figures are marketplace snapshots from third-party trackers (the live grid did not load); the Kaggle quota is the commonly reported figure, check yours in Kaggle's settings. lm-eval version from PyPI on the same day (0.4.13, released 2026-08-31; 0.5.0 exists only as a dev pre-release). Re-check both, and keep the version pinned in `pyproject.toml` for the whole module.
 
 ## Do this
 
@@ -134,6 +146,8 @@ bash scripts/sync.sh pull-ckpt baseline_124m runs/baseline_124m          # final
 ```
 
 The idle guard uses 30 minutes here because the GPU is idle while datasets download and while you read results.
+
+On Vast.ai, Lambda or Hyperbolic: copy `~/.config/mygpt/r2.env` to the box, run `set -a; . ~/r2.env; set +a` before `setup_box.sh`, and replace both `runpodctl pod stop $RUNPOD_POD_ID` commands with that provider's stop command (07.1 step 4 lists them). On a 24 GB GPU add `--batch 16` to every `mygpt.evaluate` call in 08.2.
 
 ### 4. Export the baseline the same way as the main model (3 min)
 

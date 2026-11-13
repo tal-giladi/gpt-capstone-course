@@ -54,3 +54,17 @@
     Judges tend to reward longer answers even when told not to, and DPO on UltraFeedback pushes toward
     length. Checking real wins and publishing the length numbers lets readers weigh the result; an
     instruction in the prompt reduces the bias but does not remove it.
+- id: q5
+  question: >-
+    Your Anthropic account was not approved in time, but the 1×H100 pod from step 1 is still running.
+    You want the reported win rate today with no new API account. What do you do?
+  options:
+    - Terminate the pod and judge on your laptop CPU with a small open model through the anthropic SDK.
+    - Report the summary of the step 1 dry run, since its coin-flip judge has no position bias.
+    - Serve gpt-oss-120b with vLLM on the pod and call it with --judge openai and a localhost base URL.
+    - Run lm-eval on the DPO model again, because a higher HellaSwag score is the same as a win rate.
+  correct: 2
+  explanation: >-
+    judge_winrate.py talks to any OpenAI-compatible endpoint, and an open-weight judge fits on one 80 GB
+    GPU, so the pod you already pay for can host it. Report it as an open-weight judge, which is weaker
+    than a frontier model; the dry-run summary is a coin flip and lm-eval measures something else.

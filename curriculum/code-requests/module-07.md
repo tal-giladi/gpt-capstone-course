@@ -17,3 +17,11 @@ lesson does now.
    whole common val set by passing the split's token count from `meta.json`; a `-1` shortcut would
    remove that step (see Module 8 requests).
    DONE 2026-11-13 by main maintainer: `mygpt.evaluate --eval-tokens -1` (or `all`) evaluates every full val window, grouped by lcm(64, batch) x seq_len like `hf_bpb.py`; the output JSON now includes `eval_tokens`, `batch`, `seq_len`.
+4. **Tracker choice in `train.py` (W&B or Trackio).** Added by the 2026-11-13 Modules 7–11 audit.
+   `train.py` imports `wandb` directly, so a learner who prefers a free Hugging Face tracker has no
+   live curves for pretraining. Lessons 07.1 and 09.2 now offer Trackio as an alternative: SFT/DPO
+   already work with `--report-to trackio` (TRL/Transformers integration); for pretraining 07.1 says
+   "code request filed". Request: `train.tracker: wandb | trackio` (default wandb) that imports
+   `trackio as wandb` for `init/log/finish`, skips `run.alert()` for trackio, and makes
+   `preflight.py check_wandb` skip the `WANDB_API_KEY` check when the tracker is trackio.
+   DONE 2026-11-13 by main maintainer: train.tracker = wandb | trackio | none; [trackio] extra; preflight skips the W&B key check for trackio; tests/test_tracker.py.

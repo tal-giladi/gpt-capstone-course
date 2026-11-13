@@ -5,7 +5,7 @@
   options:
     - trl-lib/ultrafeedback_binarized as is, since the TRL copy has already removed those prompts.
     - The Tulu 3 8B preference mixture, since 273k pairs dilute any contaminated prompts.
-    - Argilla's cleaned UltraFeedback by its hub id with `--eval-split ''`; `dpo.py` drops its string `prompt`.
+    - Argilla's cleaned UltraFeedback by hub id, with `--eval-split ''` (it has no test split).
     - HuggingFaceH4/ultrafeedback_binarized, loaded with `--split train_prefs` and nothing else.
   correct: 2
   explanation: >-

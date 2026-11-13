@@ -181,6 +181,8 @@ The watcher went silent and W&B sent "run crashed"; the provider console shows t
 
 3. Restart the watcher with the **original** `--started` time plus the dead node's hours added to `--plan-hours`, so its cost line stays honest.
 
+The new node does not have to be at the same provider: the checkpoints and the log are in your bucket, so any 8×H100 SXM node from 07.1's table works, with that provider's stop command in the guards (07.1 step 4). Change `--price-per-hour` on the watcher if the price differs, and add both providers' charges in 07.3.
+
 If no 8-GPU node is available, resume on 4 GPUs (`--nproc_per_node=4` in a copy of the launch script): accumulation becomes $524{,}288 / (32 \times 1024 \times 4) = 4$, the loss curve is the same, wall clock doubles and cost per token stays about the same. The data position is stored as a position in the global token stream, so nothing repeats or skips (05.2 drill D).
 
 ### 7. Cost against the plan (5 min per check-in)

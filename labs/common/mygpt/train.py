@@ -102,6 +102,19 @@ def lr_mult(step: int, total: int, warmup: int, t) -> float:
     return 1.0 - (1.0 - t.min_lr_ratio) * (step - decay_start) / max(1, total - decay_start)
 
 
+class _ModuleRun:
+    """Adapts a module-level tracker API (trackio.log / trackio.finish) to wandb's run object."""
+
+    def __init__(self, mod):
+        self._mod = mod
+
+    def log(self, metrics: dict, step: int | None = None):
+        self._mod.log(metrics, step=step)
+
+    def finish(self):
+        self._mod.finish()
+
+
 def _rng_state(device: str) -> dict:
     s = {"torch": torch.get_rng_state()}
     if device.startswith("cuda"):
@@ -212,10 +225,19 @@ def train(cfg: Config) -> dict:
             hs_examples = load_hellaswag()
     vt, vb = val_bytes_per_token(meta)
 
-    run = None
-    if master and t.wandb_project:
-        import wandb
-        run = wandb.init(project=t.wandb_project, name=t.run_name, id=t.run_name, resume="allow", config=cfg.to_dict())
+    run = None  # an object with .log(metrics, step=...) and .finish()
+    if master and t.wandb_project and t.tracker != "none":
+        if t.tracker == "trackio":
+            # Trackio (free, Hugging Face) mirrors the wandb init/log/finish API; no alerts.
+            import trackio
+            trackio.init(project=t.wandb_project, name=t.run_name, config=cfg.to_dict(), resume="allow")
+            run = _ModuleRun(trackio)
+        elif t.tracker == "wandb":
+            import wandb
+            run = wandb.init(project=t.wandb_project, name=t.run_name, id=t.run_name, resume="allow",
+                             config=cfg.to_dict())
+        else:
+            raise ValueError(f"train.tracker must be wandb, trackio or none, not {t.tracker!r}")
     log_path = os.path.join(t.out_dir, "log.jsonl")
     log_f = open(log_path, "a", encoding="utf-8") if master else None
 
@@ -251,7 +273,7 @@ def train(cfg: Config) -> dict:
 
     def alert(title: str, text: str, level: str = "INFO"):
         """W&B alert (email/Slack per the user's W&B settings); never lets a failure stop training."""
-        if run is None or not t.wandb_alerts:
+        if run is None or not t.wandb_alerts or t.tracker != "wandb":
             return
         try:
             import wandb

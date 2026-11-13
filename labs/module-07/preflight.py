@@ -158,8 +158,8 @@ def check_bucket(remote_root: str | None, ckpt_remote: str) -> None:
 
 
 def check_wandb(c) -> None:
-    if not c.train.wandb_project:
-        return
+    if not c.train.wandb_project or getattr(c.train, "tracker", "wandb") != "wandb":
+        return  # no tracker, or Trackio (uses your HF login, no W&B key)
     key = os.environ.get("WANDB_API_KEY", "")
     add("PASS" if len(key) >= 40 else "FAIL", "wandb",
         "WANDB_API_KEY set" if len(key) >= 40 else "WANDB_API_KEY missing or too short (template secret?)")

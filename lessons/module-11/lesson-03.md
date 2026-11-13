@@ -29,6 +29,12 @@ sources:
     url: https://docs.runpod.io/pods/pricing
   - title: "Hetzner Cloud regular-performance (CPX) prices"
     url: https://www.hetzner.com/cloud/regular-performance/
+  - title: "Codeberg FAQ (free for FOSS projects, storage request thresholds)"
+    url: https://docs.codeberg.org/getting-started/faq/
+  - title: "GitLab Free plan 2026 (10 GiB storage, 400 compute minutes; third-party summary)"
+    url: https://costbench.com/software/developer-tools/gitlab/free-plan/
+  - title: "Backblaze B2 cloud storage pricing"
+    url: https://www.backblaze.com/cloud-storage/pricing
 last_verified: "2026-11-13"
 ---
 
@@ -43,7 +49,7 @@ The model and the demo show what you built; the technical report shows how you t
 ## What you need
 
 - Everything committed in Modules 1–11: `budget.md`, `DATA_CARD.md`, `TOKEN_REPORT.md`, `results/ablations.md`, `decisions/0001-main-run-recipe.md`, `EVAL_REPORT.md` (08.3), `reports/` (main-run log, SFT and DPO reports, `winrate.json`, `demo.md`), `configs/`.
-- Logins to every provider you used: RunPod (and Lambda, Vast.ai if you used them), Hetzner, Cloudflare, Hugging Face, W&B, GitHub, your LLM API console.
+- Logins to every provider you used: RunPod (and Lambda, Vast.ai, Hyperbolic, Nebius or Prime Intellect if you used them), Hetzner, Cloudflare, Hugging Face, W&B, GitHub, your LLM API console.
 - The [Module 11 lab files](../../labs/module-11/): `ledger_summary.py` in `tools/`, `TECH_REPORT.template.md`.
 - About 3–4 hours of writing and 30 minutes of cleanup. **Expected cost: $0**, and the cleanup should bring your monthly run-rate to about $0.
 
@@ -78,6 +84,22 @@ Write it in the order of the template, but draft sections 8–10 first: the ledg
 
 **Why not arXiv.** arXiv's moderators expect submissions of "scholarly archival interest" and may decline work that lacks originality, novelty or significance, naming course projects explicitly. A faithful GPT-2-class reproduction with known improvements (RoPE, RMSNorm, SwiGLU, QK-norm, Muon) is valuable engineering and a great portfolio piece, but it is not new research. If your ablations found something that contradicts or extends published results, with enough seeds to be sure, write that finding up as a short focused paper, get an endorser, and then arXiv is the right place.
 
+### Where the code lives (checked 2026-11-13)
+
+| Host | Cost and limits | Verdict |
+|---|---|---|
+| **GitHub** (the repo you have used since 01.3) | Free for public repos; Releases hold files under 2 GiB each (11.1's backup) | **Keep it**: recruiters look there, and your model cards already link it |
+| GitLab.com Free | $0; 10 GiB storage, 400 CI minutes/month (third-party summaries of GitLab's plans) | Fine as a mirror (`git remote add gitlab ...`; `git push gitlab --all --tags`) |
+| Codeberg | $0, non-profit; public free/open-source projects only, ask before using more than 750 MiB of git storage | Fine as a mirror for an Apache-2.0 repo; not for anything private |
+
+### The CO2 number
+
+| Method | Cost | Use |
+|---|---|---|
+| **The formula in step 2** (H100-hours × 0.7 kW × PUE × grid intensity) | $0 | **Use it**: you have the hours in the ledger; label it ESTIMATE |
+| ML CO2 Impact calculator (web form, linked from the Hub's carbon docs) | $0, no account | A cross-check with the provider and region filled in |
+| CodeCarbon (Python package that measures while code runs) | $0 | Only for future runs: it cannot measure a run that already happened |
+
 ### What to keep after the project (R2, checked 2026-11-13)
 
 R2 Standard storage is $0.015/GB-month with the first **10 GB-month free**, and zero egress; Infrequent Access is $0.01/GB-month plus $0.01/GB to read, with a 30-day minimum.
@@ -102,12 +124,14 @@ Keeping only the checkpoint, logs, tokenizer and manifests fits in the free 10 G
 | RunPod | Pods (running **or stopped**: stopped volume disk $0.20/GB-month), network volumes ($0.07/GB-month), credit balance | Console → Pods, Storage, Billing | Delete all pods and volumes; leave remaining credit or ask support about it |
 | Lambda | Running instances (billed until terminated), persistent filesystems | Console → Instances, Storage | Terminate all; delete filesystems |
 | Vast.ai | Instances, including stopped ones (storage keeps billing) | Console → Instances | Destroy all |
+| Hyperbolic, Nebius, Prime Intellect (if used) | Instances, attached or detached disks, prepaid credit | Console → Instances, Storage, Billing | Delete all |
+| Backblaze B2 (if your bucket or a backup is there) | Storage ($6.95/TB-month) | Buckets; Billing | Same keep list as R2 below |
 | Hetzner Cloud | Servers (billed even when powered off), volumes, snapshots, backups, primary IPs | Console → project → Servers, Volumes, Snapshots, Primary IPs | Delete all |
 | Cloudflare R2 | Storage above 10 GB-month | Dashboard → R2 → bucket → Metrics; Billing | Keep the bucket at the size you chose above |
 | Hugging Face | PRO subscription (if you took it for 11.2 or the article), paid Space hardware | Settings → Billing | Cancel PRO when done; Space on ZeroGPU / CPU basic |
-| LLM API (Anthropic/OpenAI) | Prepaid credit, auto-reload | Console → Billing, API keys | Auto-reload off; revoke the judge key |
-| W&B | Free tier; storage cap | Settings → Usage | Keep (your runs are evidence) |
-| GitHub | Free for public repos | Settings → Billing | Keep |
+| LLM API (Anthropic, OpenAI, Gemini, OpenRouter, Groq) | Prepaid credit, auto-reload, a Gemini billing account | Console → Billing, API keys | Auto-reload off; revoke the judge key |
+| W&B (or Trackio on a HF Space) | Free tier; 5 GB storage | Settings → Usage | Keep (your runs are evidence) |
+| GitHub (or GitLab, Codeberg) | Free for public repos | Settings → Billing | Keep |
 
 > [!CAUTION]
 > Deleting is final. A deleted pod, volume, Hetzner server or R2 object cannot be recovered, and `rclone delete` has no undo. Delete only after the thing you need is listed, with the right size, somewhere else (bucket, Hub, git), and run every `rclone delete` with `--dry-run` first.
@@ -149,6 +173,8 @@ hcloud server list && hcloud volume list && hcloud image list --type snapshot &&
 vastai show instances                     # if you used Vast.ai
 ```
 
+Lambda, Hyperbolic, Nebius and Prime Intellect: check the Instances and Storage pages in each console you used.
+
 Then revoke or rotate keys. Do this in each console, not by deleting a local file:
 
 | Key | Action |
@@ -156,7 +182,8 @@ Then revoke or rotate keys. Do this in each console, not by deleting a local fil
 | RunPod, Lambda, Vast.ai, Hetzner API tokens | **Revoke** (create a new one if you ever come back) |
 | R2 API token used by rclone | Revoke the read-write token; keep a **read-only** token only if you need scripted downloads |
 | Hugging Face write token | **Revoke**; keep or create a fine-grained read token if you need one |
-| Anthropic / OpenAI judge key | **Revoke**; turn auto-reload off |
+| Judge key (Anthropic, OpenAI, Gemini, OpenRouter or Groq) | **Revoke**; turn auto-reload off |
+| Hyperbolic, Nebius, Prime Intellect API keys (if used) | **Revoke** |
 | W&B API key | Rotate if it ever sat on a rented box |
 | SSH keys added to providers | Remove from the provider accounts |
 

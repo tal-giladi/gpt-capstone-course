@@ -21,6 +21,10 @@ sources:
     url: https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct
   - title: "HuggingFaceTB/smol-smoltalk dataset card"
     url: https://huggingface.co/datasets/HuggingFaceTB/smol-smoltalk
+  - title: "Trackio documentation (Transformers report_to integration)"
+    url: https://huggingface.co/docs/trackio/index
+  - title: "Vast.ai CLI commands (stop vs destroy instance)"
+    url: https://docs.vast.ai/cli/commands
 last_verified: "2026-11-13"
 ---
 
@@ -36,7 +40,8 @@ You have `hf/my-gpt-350m-sft/` (a full fine-tune of your base model on smol-smol
 
 - The data decision from [09.1](lesson-01.md) (`reports/sft_data.md`), with `tools/sft_data_stats.py` and `tools/probe_chat.py` committed.
 - Your RunPod template `mygpt-gpu` from [04.2](../module-04/lesson-02.md), RunPod credit, and the base model in `r2:mygpt/hf/my-gpt-350m-base/`.
-- Optional: a W&B key in the template (`WANDB_API_KEY`) to watch curves in the browser.
+- Optional: a W&B key in the template (`WANDB_API_KEY`) to watch curves in the browser (`--report-to wandb`), or Trackio instead (`pip install trackio`, then `--report-to trackio`; free, no W&B account, dashboard local or on a free HF Space). The default `--report-to none` keeps only the console and trainer logs.
+- A 1× H100 at RunPod or one of the alternatives in [09.1](lesson-01.md)'s box table.
 - About 4 hours wall clock, of which ~3–3.5 h on the GPU (sweep ~0.5 h, full run ~2–3 h, checks ~0.3 h).
 - **Expected cost: ~$8–10** on Community Cloud at $2.69/h (~$13–16 on Secure at $4.39/h).
 
@@ -103,6 +108,8 @@ tmux new -d -s guard "bash scripts/autoshutdown.sh --idle-minutes 20 --grace-min
 ```
 
 The idle guard stops the pod 20 minutes after the GPU goes idle, so a finished or crashed run stops billing even if you are asleep.
+
+Not on RunPod? Copy `r2.env` to the box and source it before `setup_box.sh`, and give both the hard stop and `autoshutdown.sh` your provider's stop command (`--stop-cmd '...'`, list in 07.1 step 4). Without `--stop-cmd`, `autoshutdown.sh` falls back to `sudo shutdown -h now`, which does **not** stop billing on Vast.ai, Lambda or Hyperbolic.
 
 ### 2. Pull the base model and check the data is unchanged (5 min)
 
@@ -205,7 +212,7 @@ For calibration: SmolLM2-360M-Instruct, trained on the same data after 4 trillio
 git add reports/sft_probe.md && git commit -m "SFT probe report" && git push
 ```
 
-If you continue with [10.1](../module-10/lesson-01.md) right away, keep the pod: DPO starts from `hf/my-gpt-350m-sft` on this box. Otherwise terminate it in the RunPod console.
+If you continue with [10.1](../module-10/lesson-01.md) right away, keep the pod: DPO starts from `hf/my-gpt-350m-sft` on this box. Otherwise terminate it in the RunPod console (Vast.ai: `vastai destroy instance <ID>`; Lambda, Hyperbolic: terminate in the dashboard).
 
 > [!CAUTION]
 > Terminating deletes the container disk. Check that `rclone ls` shows `model.safetensors` under `hf/my-gpt-350m-sft/` before you terminate.

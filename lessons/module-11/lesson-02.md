@@ -153,6 +153,15 @@ The Space builds (installing torch takes a few minutes) and starts. The **Logs**
 > [!WARNING]
 > Never choose paid Space hardware "just to try it": a T4 small runs at $0.40/h and an upgraded Space never sleeps by default, so it bills every hour until you downgrade or pause it. If you do upgrade, set a sleep time in the same session and add a calendar reminder to downgrade.
 
+If you host somewhere else, the same `app.py` runs unchanged; only the setup differs:
+
+| Host | What to do instead of step 4 |
+|---|---|
+| HF Space on CPU basic (PRO) | Same commands; leave hardware on CPU basic |
+| Hetzner (or any) VPS | `pip install gradio==6.32.0 -r space/requirements.txt` (torch 2.15.0 is fine here), then `MODEL_ID=<you>/my-gpt-350m MODEL_REVISION=v1.0 GRADIO_SERVER_NAME=0.0.0.0 python space/app.py` inside tmux; open port 7860 in the firewall, or better put a reverse proxy with HTTPS in front |
+| Modal, Replicate, RunPod Serverless | Not provided by the lab: each needs its own wrapper (a Modal web endpoint, a Cog container, a serverless handler) around `app.py`'s `respond` function. Budget an extra 1–2 hours and use their scale-to-zero setting |
+| Local only | `python space/app.py` and record the screen; link the video from the card |
+
 ### 5. Test like a visitor (10 min)
 
 Open `https://huggingface.co/spaces/<you>/my-gpt-350m-chat` in a private window (logged out). Ask the three examples and one question from your probe set where you know the model fails. Note the time to first token and to the full answer. Logged out you have 2 minutes of ZeroGPU per day, enough for many short answers; if the page says the quota is exhausted, log in or wait.

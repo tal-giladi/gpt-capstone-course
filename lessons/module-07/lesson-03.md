@@ -23,6 +23,10 @@ sources:
     url: https://docs.runpod.io/pods/manage-pods
   - title: "rclone filtering (--filter, --dry-run)"
     url: https://rclone.org/filtering/
+  - title: "Backblaze B2 cloud storage pricing"
+    url: https://www.backblaze.com/cloud-storage/pricing
+  - title: "Vast.ai CLI commands (stop vs destroy instance)"
+    url: https://docs.vast.ai/cli/commands
   - title: "Cloudflare R2 pricing"
     url: https://developers.cloudflare.com/r2/pricing/
 last_verified: "2026-11-13"
@@ -67,7 +71,11 @@ The export class is fixed by your recipe (06.4's export rule): RoPE + RMSNorm + 
 |---|---|---|
 | Bucket only (`hf/my-gpt-350m-base/`) | ~$0.02/month | Enough for Modules 8–11; one copy |
 | **Bucket + private Hub repo** | $0 (free accounts include 100 GB of private storage) | A second copy in another company; Module 11 makes the final model public |
+| Bucket + a second bucket at another company (Backblaze B2, $6.95/TB-month, i.e. ~$0.01/month for 1.35 GB; or your R2 if your main bucket is B2) | ~$0.01/month | Same "two companies" safety without a Hub account; add the remote with `rclone config` and `rclone copy r2:mygpt/hf/my-gpt-350m-base <remote>:<bucket>/hf/my-gpt-350m-base` |
+| Bucket + your laptop or an external disk (`bash scripts/sync.sh pull-hf my-gpt-350m-base hf/my-gpt-350m-base`) | $0 | A copy you control; Module 8 onward pulls from the bucket anyway |
 | Public Hub repo now | $0 | Not yet: Module 8 has not measured it and Module 11 writes the model card first |
+
+If your main bucket is not R2 (you chose B2 or another S3-compatible store in 02.2), everything here works the same as long as `MYGPT_REMOTE` points at it; only the storage prices in the table above change.
 
 > [!WARNING]
 > `python -m mygpt.export_hf ... --push you/repo` creates the repo **private** by default (`--no-private` would make it public) and prints its visibility. A repo that already exists keeps its visibility, so if the printed line says `PUBLIC`, make it private with `hf repos settings you/repo --private`. Plain `hf upload` to a repo that does not exist yet still creates it public on a personal account.
@@ -138,7 +146,7 @@ scp -P <PORT> root@<POD_IP>:mygpt/runs/{main_350m.out,watch.out} reports/
 git add reports/ && git commit -m "Main run: console and watcher logs" && git push
 ```
 
-Then kill the guards and terminate: RunPod console → the pod → **Terminate** (not Stop). On Lambda: **Terminate** in the dashboard; on Vast.ai: **Destroy** the instance. The pod disappears from the list.
+Then kill the guards and terminate: RunPod console → the pod → **Terminate** (not Stop). On Lambda: **Terminate** in the dashboard; on Vast.ai: **Destroy** the instance (`vastai destroy instance <ID>`; `stop` keeps billing the disk); on Hyperbolic, Nebius or Prime Intellect: delete the instance and any attached disk in the console. The pod disappears from the list.
 
 ### 6. Hunt for anything else that bills (10 min, laptop)
 
@@ -148,6 +156,7 @@ Then kill the guards and terminate: RunPod console → the pod → **Terminate**
 | RunPod → Storage | Network volumes ($0.07/GB-mo, billed whether used or not) | Delete those you are not using for Modules 8–10 |
 | Lambda → Instances, File systems | Running instances, persistent file systems | Terminate / delete |
 | Vast.ai → Instances | Stopped instances still bill storage | Destroy |
+| Hyperbolic, Nebius, Prime Intellect (if used) → Instances, Disks | Running instances, detached disks | Delete |
 | Bucket | Old checkpoints of this run and rolled-back states | Step 7 |
 
 ### 7. Prune the bucket (10 min, laptop)

@@ -18,6 +18,20 @@ sources:
     url: https://docs.runpod.io/pods/savings-plans
   - title: "Lambda pricing (on-demand and 1-Click Clusters)"
     url: https://lambda.ai/service/gpu-cloud/reserved-cloud-pricing
+  - title: "Lambda instance pricing (8x H100 $4.59/GPU-h from 2026-11-16)"
+    url: https://lambda.com/service/gpu-cloud/pricing
+  - title: "Lambda Cloud API reference (terminate instances, Bearer auth)"
+    url: https://docs.lambda.com/api/cloud
+  - title: "Hyperbolic GPU marketplace (H100 SXM from $3.19/GPU-h)"
+    url: https://www.hyperbolic.ai/marketplace
+  - title: "Nebius prices (H100 $4.50/GPU-h on-demand)"
+    url: https://nebius.com/prices
+  - title: "Vast.ai CLI commands (stop vs destroy instance)"
+    url: https://docs.vast.ai/cli/commands
+  - title: "W&B (CoreWeave) pricing: Free plan 5 GB storage, Pro from $60/month"
+    url: https://coreweave.com/forge-pricing
+  - title: "Trackio documentation (wandb-compatible API, local or HF Space dashboard)"
+    url: https://huggingface.co/docs/trackio/index
   - title: "W&B docs: alerts and notifications (run finished, run crashed)"
     url: https://docs.wandb.ai/support/models/articles/how-do-i-set-up-wandb-alerts-and-notifications
   - title: "ntfy docs: publishing a notification with one HTTP request"
@@ -63,6 +77,9 @@ The factor 1.25 (what `budget_calc.py` adds) covers setup, `torch.compile`, 77 v
 | **RunPod Secure Cloud, on-demand** | $35.12/h ($4.39/GPU-h) | ~$186 | ~$316 | Your template, secrets and stop commands already work; per-second billing; 8× availability varies by hour |
 | Lambda on-demand | $31.92/h until 2026-11-15, **$36.72/h from 2026-11-16** | ~$195 (new price) | ~$330 | Reliable whole nodes; a shutdown does not stop billing, terminate via dashboard or API |
 | Vast.ai verified datacenter host, on-demand | ~$21–24/h (varies per host) | ~$111–127 | ~$189–216 | Cheapest; host quality varies, so check the host's reliability score, bandwidth price and NVLink before renting |
+| Hyperbolic on-demand | from $3.19/GPU-h, ~$25.50/h for 8 (marketplace rate, refreshed weekly) | ~$135 | ~$230 | Supplier marketplace; the 8-GPU offer must be confirmed in the app on the day; no template, so you set the box up by hand (step 4) |
+| Nebius on-demand | $4.50/GPU-h, ~$36/h for 8 | ~$191 | ~$324 | Self-serve cloud with HGX 8-GPU VMs; new accounts get GPU quotas, so request them days before |
+| Prime Intellect | aggregator, ~$1.50–4/GPU-h depending on the underlying cloud (third-party directory) | varies | varies | Good for finding an 8× node when the others are full; billing and stop rules are the underlying provider's |
 | RunPod Community Cloud | H100 SXM from $2.69/GPU-h, but 8-GPU community nodes are rare | | | Fine for 1-GPU work; do not plan the main run on finding one |
 | Spot / interruptible (RunPod spot, Vast interruptible) | ~40–60% cheaper | | | Can be taken away with little or no warning; each interruption costs ~7 min of lost steps plus 15–30 min to get going again, and an 8-GPU replacement may not exist. Not for this run |
 | Reserved: RunPod savings plan | ~15–20% off (older RunPod figures; current rates only in the console) | | | Month-long, non-refundable commitment per GPU type: you would pay for ~720 hours to save on ~6 |
@@ -70,16 +87,25 @@ The factor 1.25 (what `budget_calc.py` adds) covers setup, `torch.compile`, 77 v
 
 ESTIMATE: billed hours include setup, evals, checkpoints and one resume, from 06.4's example speed; use your own numbers.
 
-**Recommended:** on-demand, single 8×H100 SXM node, on the provider whose stop/terminate path you have already tested: RunPod Secure Cloud. Fallback, in this order: Lambda on-demand, a verified Vast.ai datacenter host (≥ 99% reliability, all-NVLink, CUDA 13 driver). Rent it at a time when you can be at the keyboard for the first hour and reachable by phone for the rest.
+**Recommended:** on-demand, single 8×H100 SXM node, on the provider whose stop/terminate path you have already tested: RunPod Secure Cloud. Fallback, in this order: Lambda on-demand, a verified Vast.ai datacenter host (≥ 99% reliability, all-NVLink, CUDA 13 driver), Hyperbolic or Nebius. Rent it at a time when you can be at the keyboard for the first hour and reachable by phone for the rest.
 
 > [!NOTE]
-> Prices from the RunPod and Lambda pricing pages and the Vast.ai offer list on 2026-11-13; Lambda's increase takes effect on 2026-11-16. Savings-plan percentages come from RunPod's launch announcement and may have changed. Re-check the live price and 8-GPU availability on launch day and write both into `budget.md` before you deploy.
+> Prices from the RunPod, Lambda, Nebius and Hyperbolic pricing pages and the Vast.ai offer list on 2026-11-13; Lambda's increase takes effect on 2026-11-16. The Prime Intellect range comes from a third-party directory, not the provider. Savings-plan percentages come from RunPod's launch announcement and may have changed. Re-check the live price and 8-GPU availability on launch day and write both into `budget.md` before you deploy.
+
+### Experiment tracking (checked 2026-11-13)
+
+| Option | Cost and limits | What you lose or gain | Use when |
+|---|---|---|---|
+| **W&B Free** (`wandb_project: my-gpt`) | $0; up to 5 seats, 5 GB storage per month; next plan Pro from $60/month | Live curves on your phone and the off-node crash email | **Recommended**: already in your template since 05.1 |
+| No tracker (`wandb_project: ""`) | $0, no account | `preflight.py` prints a WARN instead of a PASS; curves come from `log.jsonl` (`watch_run.py` now, `plot_curves.py` in 08.3); no alert from outside the node, so check in every hour | You do not want a W&B account, or W&B is down |
+| Trackio (Hugging Face, open source) | $0; dashboard local or on a free HF Space | wandb-like API: `pip install -e ".[trackio]"`, then add `train.tracker=trackio` to the launch (same `train.wandb_project` key, no W&B key needed, no `run.alert()` — rely on `tools/watch_run.py`); SFT and DPO in Modules 9–10 use `--report-to trackio` | You prefer to keep everything on Hugging Face |
 
 ### Alerts: what tells you something is wrong
 
 | Signal | Tool | Cost | Covers |
 |---|---|---|---|
 | Phone push from `tools/watch_run.py --ntfy <topic>` | ntfy.sh public server + ntfy app | $0 | Stale log (hang, dead node), NaN, unrecovered loss spike, sustained slowdown, cost overrun |
+| The same push through your own ntfy server (`--ntfy-server https://ntfy.<your-domain>`) | Self-hosted ntfy on a small VPS you already run | $0 extra | Same as above, with a topic nobody else can read |
 | W&B "Run finished" / "Run crashed" email | W&B User Settings → Alerts | $0 (free tier) | The run ended, or stopped sending heartbeats (process killed, node gone) |
 | W&B scriptable alert from `train.py` (`run.alert()`) | W&B User Settings → Alerts → Scriptable run alerts | $0 (free tier) | NaN/Inf stop (with the last good checkpoint) and the final step; on by default with W&B, `train.wandb_alerts=false` turns it off |
 | Provider low-balance email | Provider billing settings, where offered | $0 | Running out of credit before the run ends |
@@ -147,7 +173,15 @@ RunPod → **Secure Cloud** → **H100 SXM**, GPU count **8**, template `mygpt-8
 nohup bash -c 'sleep 11h; runpodctl pod stop $RUNPOD_POD_ID' >/tmp/hardstop.log 2>&1 &
 ```
 
-Use twice your predicted billed hours, rounded up (11 h for a 5.3 h prediction). On Lambda or Vast.ai, replace the stop command with the provider's terminate/stop API call you tested in 04.2.
+Use twice your predicted billed hours, rounded up (11 h for a 5.3 h prediction).
+
+On another provider there is no `mygpt-8gpu` template and no `runpodctl`. Copy `~/.config/mygpt/r2.env` (and `WANDB_API_KEY` if you use W&B) to the node with `scp`, run `set -a; . ~/r2.env; set +a` in every shell before step 5, and use that provider's stop command in both the hard stop above and the `--stop-cmd` of step 5:
+
+| Provider | Stop command for the guards | Then, at the end (07.3) |
+|---|---|---|
+| Vast.ai | `vastai stop instance <ID>` (compute stops, disk keeps billing) | `vastai destroy instance <ID>` |
+| Lambda | Terminate through the Cloud API (`https://cloud.lambda.com/api/v1`, Bearer API key; "Terminate instances" in the API docs). A `shutdown` inside the VM does not stop billing | Dashboard → Instances → Terminate |
+| Hyperbolic, Nebius, Prime Intellect | The provider's stop/delete API or CLI; test it on a 1-GPU box first. Until you have tested it, set a calendar alarm at the hard-stop time | Delete the instance and any attached disk in the console |
 
 ### 5. Set up the node and pull the data (15 min)
 
