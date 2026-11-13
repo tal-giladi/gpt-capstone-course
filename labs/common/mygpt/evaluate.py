@@ -130,7 +130,7 @@ def main(argv=None):
 
     from .checkpoint import load_checkpoint
     from .config import config_from_dict
-    from .data import DistributedTokenLoader, read_meta
+    from .data import DistributedTokenLoader, read_meta, resolve_tokenizer
     from .model import GPT
     from .tokenizer import get_tokenizer
 
@@ -149,7 +149,7 @@ def main(argv=None):
         out["val_loss"] = val_loss(model, loader, max(1, args.eval_tokens // (B * T)), ctx)
         out["val_bpb"] = bits_per_byte(out["val_loss"], *val_bytes_per_token(meta))
     if args.hellaswag:
-        tok = get_tokenizer(args.tokenizer or meta.get("tokenizer", "gpt2"))
+        tok = get_tokenizer(args.tokenizer or resolve_tokenizer(data_dir, meta) or "gpt2")
         out["hellaswag"] = hellaswag(model, tok, device, ctx, None if args.hellaswag < 0 else args.hellaswag)
     print(json.dumps(out, indent=2))
     return out

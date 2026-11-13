@@ -12,8 +12,11 @@ model is a frozen copy of --model (TRL creates it). Any other DPOConfig field:
 from __future__ import annotations
 
 import argparse
+import os
+import sys
 
-import yaml
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _common import parse_set  # noqa: E402
 
 
 def parse_args(argv=None):
@@ -62,13 +65,12 @@ def main(argv=None):
     if args.max_samples:
         train_ds = train_ds.shuffle(seed=0).select(range(min(args.max_samples, len(train_ds))))
 
-    extra = {k: yaml.safe_load(v) for k, v in (s.split("=", 1) for s in args.set)}
-    cfg = DPOConfig(
+    kw = dict(
         output_dir=args.out,
         beta=args.beta,
         learning_rate=args.lr,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.1,
+        warmup_steps=0.1,  # float < 1 = fraction of total steps
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.grad_accum,
@@ -80,8 +82,8 @@ def main(argv=None):
         eval_strategy="steps" if eval_ds is not None else "no",
         eval_steps=500,
         report_to=args.report_to,
-        **extra,
     )
+    cfg = DPOConfig(**{**kw, **parse_set(args.set)})  # --set wins over the defaults above
     trainer = DPOTrainer(model=model, args=cfg, train_dataset=train_ds, eval_dataset=eval_ds, processing_class=tok)
     trainer.train()
     trainer.save_model(args.out)

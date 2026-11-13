@@ -23,21 +23,23 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 from .checkpoint import latest_checkpoint, load_checkpoint, rclone_pull_latest, rclone_push, save_checkpoint
 from .config import Config, load_config
-from .data import DistributedTokenLoader, make_synthetic_shards, read_meta
+from .data import DistributedTokenLoader, make_synthetic_shards, read_meta, resolve_tokenizer
 from .evaluate import bits_per_byte, hellaswag, val_bytes_per_token, val_loss
 from .model import GPT
 from .muon import Muon
 
-# Dense bf16 tensor-core peak per GPU (no sparsity), for MFU. Unknown GPU -> MFU not reported.
-PEAK_FLOPS = {"H100": 989e12, "H200": 989e12, "B200": 2250e12, "A100": 312e12, "L40S": 362e12,
-              "A6000": 155e12, "4090": 165e12, "L4": 121e12, "A10": 125e12}
+# Dense bf16 tensor-core peak per GPU (no sparsity), for MFU. First substring match of the
+# CUDA device name wins, so specific variants come before "H100" (= SXM). Unknown -> no MFU.
+PEAK_FLOPS = [("H100 NVL", 835e12), ("H100 PCIe", 756e12), ("H100", 989e12), ("H200", 989e12),
+              ("B200", 2250e12), ("A100", 312e12), ("L40S", 362e12), ("A6000", 155e12),
+              ("4090", 165e12), ("L4", 121e12), ("A10", 125e12)]
 
 
 def peak_flops(device: str) -> float | None:
     if not device.startswith("cuda"):
         return None
     name = torch.cuda.get_device_name(torch.device(device))
-    for key, val in PEAK_FLOPS.items():
+    for key, val in PEAK_FLOPS:
         if key in name:
             return val
     return None
@@ -185,9 +187,10 @@ def train(cfg: Config) -> dict:
         print(f"[train] params {n / 1e6:.1f}M | world {world} | micro {B}x{T} | accum {accum} | "
               f"steps {total_steps} | device {device} | dtype {t.dtype}")
     tok = None
-    if t.hellaswag_every and meta.get("tokenizer") not in (None, "synthetic"):
+    tok_name = resolve_tokenizer(data_dir, meta)
+    if t.hellaswag_every and tok_name not in (None, "synthetic"):
         from .tokenizer import get_tokenizer
-        tok = get_tokenizer(meta["tokenizer"])
+        tok = get_tokenizer(tok_name)
     vt, vb = val_bytes_per_token(meta)
 
     run = None
@@ -213,7 +216,7 @@ def train(cfg: Config) -> dict:
         if master:
             state = {"model": raw_model.state_dict(), "optimizers": [o.state_dict() for o in optimizers],
                      "loader": train_loader.state_dict(), "rng": _rng_state(device),
-                     "config": cfg.to_dict(), "meta": meta}
+                     "config": cfg.to_dict(), "meta": {**meta, "tokenizer_resolved": tok_name}}
             path = save_checkpoint(t.out_dir, step_done, state, t.keep_last)
             last_good = path
             if t.ckpt_remote:
@@ -280,7 +283,8 @@ def train(cfg: Config) -> dict:
                        "tokens": step_done * t.total_batch_tokens}
                 if master:
                     print(f"step {step_done:>6}/{total_steps} | loss {last_loss:.4f} | lr {rec['lr']:.2e} | "
-                          f"gnorm {gn:.2f} | {tok_s / 1e3:.1f}k tok/s | mfu {mfu * 100:.1f}%", flush=True)
+                          f"gnorm {gn:.2f} | {tok_s / 1e3:.1f}k tok/s | "
+                          f"mfu {f'{mfu * 100:.1f}%' if peak else 'n/a'}", flush=True)
                 t_last, steps_since = time.time(), 0
             if val_loader is not None and t.eval_every and (step_done % t.eval_every == 0 or last):
                 rec = rec or {"step": step_done}

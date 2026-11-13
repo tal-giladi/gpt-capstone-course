@@ -16,7 +16,7 @@ model:
   tie_embeddings: true
 
 train:
-  data_dir: data/fineweb_edu_10B_gpt2
+  data_dir: data/tok/gpt2-10BT   # = bucket tok/gpt2-10BT/
   train_tokens: 10_000_000_000
   total_batch_tokens: 524288   # 0.5M tokens/step (GPT-3 small)
   micro_batch_size: 64         # 64 x 1024 per GPU; accum = 524288 / (64*1024*8) = 1
@@ -38,6 +38,6 @@ train:
   hellaswag_every: 1000
   ckpt_every: 1000
   keep_last: 3
-  ckpt_remote: ""              # e.g. r2:my-gpt-bucket/checkpoints/baseline_124m
+  ckpt_remote: ""              # e.g. r2:mygpt/ckpt/baseline_124m
   wandb_project: ""            # e.g. my-gpt
   log_every: 10

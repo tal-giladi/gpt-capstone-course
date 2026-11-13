@@ -19,7 +19,7 @@ model:
   tie_embeddings: true
 
 train:
-  data_dir: data/fineweb_edu_100B_own32k
+  data_dir: data/tok/bpe32k-100BT-30   # = bucket tok/bpe32k-100BT-30/
   train_tokens: 20_000_000_000  # 38146 steps
   total_batch_tokens: 524288
   micro_batch_size: 32       # 32 x 1024 x 8 GPUs -> accum 2
@@ -43,6 +43,6 @@ train:
   hellaswag_every: 2000
   ckpt_every: 1000
   keep_last: 3
-  ckpt_remote: ""            # set this! e.g. r2:my-gpt-bucket/checkpoints/main_350m
+  ckpt_remote: ""            # set this! e.g. r2:mygpt/ckpt/main_350m
   wandb_project: ""
   log_every: 10

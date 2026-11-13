@@ -68,6 +68,8 @@ def test_tokenize_report_decontam_scripts(parquet_dir, tiny_tokenizer, tmp_path)
     tok = get_tokenizer(tiny_tokenizer)
     assert meta["eot_id"] == tok.eot_id and meta["val_tokens"] >= 2000 and meta["train_tokens"] > 10000
     assert meta["train_docs"] + meta["val_docs"] == 300
+    from mygpt.data import resolve_tokenizer
+    assert resolve_tokenizer(out) == out and os.path.exists(os.path.join(out, "tokenizer.json"))
     vals = sorted(f for f in os.listdir(out) if f.startswith("val_"))
     trains = sorted(f for f in os.listdir(out) if f.startswith("train_"))
     assert vals and len(trains) >= 3

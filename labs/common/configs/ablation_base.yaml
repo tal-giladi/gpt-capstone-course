@@ -19,7 +19,7 @@ model:
   tie_embeddings: true
 
 train:
-  data_dir: data/fineweb_edu_own32k
+  data_dir: data/tok/bpe32k-100BT-30   # = bucket tok/bpe32k-100BT-30/
   train_tokens: 1_000_000_000  # 1907 steps
   total_batch_tokens: 524288
   micro_batch_size: 64         # 1 GPU -> accum 8
@@ -43,6 +43,6 @@ train:
   hellaswag_every: 0           # too noisy at 1B tokens; compare val_bpb
   ckpt_every: 500
   keep_last: 2
-  ckpt_remote: ""
+  ckpt_remote: ""              # e.g. r2:mygpt/ckpt/ablation_base
   wandb_project: ""
   log_every: 10

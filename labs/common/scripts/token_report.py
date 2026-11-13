@@ -40,7 +40,8 @@ def main(argv=None):
     if meta.get("total_bytes"):
         report["bytes_per_token"] = round(meta["total_bytes"] / max(total, 1), 4)
 
-    tok_name = args.tokenizer or meta.get("tokenizer")
+    from mygpt.data import resolve_tokenizer
+    tok_name = args.tokenizer or resolve_tokenizer(args.shards, meta)
     first = sorted(glob.glob(os.path.join(args.shards, "train_*.bin")))
     if tok_name and tok_name != "synthetic" and first:
         from mygpt.tokenizer import get_tokenizer

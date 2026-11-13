@@ -137,7 +137,12 @@ def main(argv=None):
                 pool.terminate()
                 break
     w.flush()
-    meta = {"tokenizer": tok_name, "vocab_size": tok.vocab_size, "eot_id": tok.eot_id,
+    if tok_name != "gpt2":  # ship the tokenizer with the shards (sync.sh push-tok copies both)
+        import shutil
+        src = os.path.join(tok_name, "tokenizer.json") if os.path.isdir(tok_name) else tok_name
+        shutil.copy(src, os.path.join(args.out, "tokenizer.json"))
+    meta = {"tokenizer": "gpt2" if tok_name == "gpt2" else "tokenizer.json",
+            "tokenizer_source": tok_name,"vocab_size": tok.vocab_size, "eot_id": tok.eot_id,
             "train_tokens": w.tokens["train"], "val_tokens": w.tokens["val"],
             "train_bytes": w.bytes["train"], "val_bytes": w.bytes["val"],
             "train_docs": w.docs["train"], "val_docs": w.docs["val"],

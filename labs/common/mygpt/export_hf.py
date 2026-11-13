@@ -183,7 +183,14 @@ def main(argv=None):
     export_kind(cfg.model)  # fail fast before loading anything heavy
     model = GPT(cfg.model)
     model.load_state_dict(ck["model"])
-    tokenizer = args.tokenizer or (ck.get("meta") or {}).get("tokenizer")
+    tokenizer = args.tokenizer
+    if tokenizer is None:  # same lookup as training: gpt2, or tokenizer.json next to the shards
+        from .data import resolve_tokenizer
+        meta = ck.get("meta") or {}
+        tokenizer = resolve_tokenizer(cfg.train.data_dir, meta) if os.path.isdir(cfg.train.data_dir) \
+            else meta.get("tokenizer_resolved") or meta.get("tokenizer")
+        if tokenizer not in (None, "gpt2", "synthetic") and not os.path.exists(tokenizer):
+            raise SystemExit(f"tokenizer {tokenizer!r} not found on this box; pass --tokenizer DIR")
     if tokenizer in (None, "synthetic"):
         print("[export] no tokenizer recorded; exporting weights only (pass --tokenizer gpt2|DIR)")
         tokenizer = None

@@ -75,7 +75,8 @@ def test_lr_schedules():
 def test_bench_runs_on_cpu(tmp_path):
     out = str(tmp_path / "bench.jsonl")
     res = run_script("bench.py", "--config", SMOKE, "--steps", "3", "--warmup", "1", "--price-per-gpu-hour", "2.5",
-                     "--out", out)
+                     "--json", out, "train.micro_batch_size=4")
     r = json.loads(open(out, encoding="utf-8").read())
-    assert r["tokens_per_s"] > 0 and r["usd_per_1b_tokens"] > 0 and r["device"] == "cpu"
-    assert "tokens_per_s" in res.stdout
+    assert r["tokens_per_s_per_gpu"] > 0 and r["usd_per_1b_tokens"] > 0 and r["gpu"] == "cpu"
+    assert r["micro_batch"] == 4 and r["warmup_steps"] == 1 and r["data"] == "random tokens"
+    assert "random tokens" in res.stdout and "per 1B tokens" in res.stdout

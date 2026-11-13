@@ -15,9 +15,9 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Foundations (plan, spec, contract, sidebar, README, glossary stub, course details)
 - [ ] Lab code `labs/common/` + CPU tests
 - [ ] Module 1 — Plan, accounts and guardrails
-- [ ] Module 2 — Data: find it, license it, store it
+- [x] Module 2 — Data: find it, license it, store it
 - [ ] Module 3 — Your tokenizer and token shards
-- [ ] Module 4 — GPUs: pick, rent, benchmark
+- [x] Module 4 — GPUs: pick, rent, benchmark
 - [ ] Module 5 — Baseline: reproduce GPT-2 124M
 - [ ] Module 6 — Make it yours: ablations
 - [ ] Module 7 — The main run
@@ -29,7 +29,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 
 ## Now working
 - Agent A: labs/common code + tests
-- Agent B: Module 2, then Module 4
+- Agent C: Module 1, then Module 3
 
 ## Decisions
 - Modules numbered 1–11 (plan's 0–10 shifted by one).

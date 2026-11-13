@@ -58,6 +58,18 @@ def read_meta(data_dir: str) -> dict:
         return json.load(f)
 
 
+def resolve_tokenizer(data_dir: str, meta: dict | None = None) -> str | None:
+    """Tokenizer for a shards dir: "gpt2", the dir itself if it holds tokenizer.json (written by
+    tokenize_shards.py, so shards and tokenizer travel together), else what meta.json says."""
+    meta = read_meta(data_dir) if meta is None else meta
+    name = meta.get("tokenizer")
+    if name in ("gpt2", "synthetic"):
+        return name
+    if os.path.exists(os.path.join(data_dir, "tokenizer.json")):
+        return data_dir
+    return name
+
+
 def write_meta(data_dir: str, meta: dict) -> None:
     with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2)
