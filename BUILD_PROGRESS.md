@@ -28,7 +28,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
-- Agent F: labs/common fixes from code-requests 05 and 06
+- Agent G: Module 7, then Module 8
 - Agent E: Module 9, then Module 10
 
 ## Decisions

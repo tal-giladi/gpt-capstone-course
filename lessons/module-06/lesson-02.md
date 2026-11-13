@@ -51,11 +51,11 @@ All runs start from `configs/ablation_base.yaml` (GPT-2 architecture, 32k vocabu
 | `abl_swiglu` | `model.mlp=swiglu` | Gated SiLU MLP with hidden 8/3 × 768 = 2,048 instead of GELU with 3,072; same parameters | 111.0M | ~775M | Llama, Qwen, PaLM |
 | `abl_qknorm` | `model.qk_norm=true` | Normalises queries and keys per head before the dot product | ~111.0M | ~775M | Qwen3, speedrun |
 | `abl_nobias` | `model.bias=false` | Removes all bias vectors from linear layers and norms | ~110.9M | ~775M | Llama, Qwen3 |
-| `abl_untied` | `model.tie_embeddings=false` | Separate output matrix instead of reusing the input embedding | 136.2M (+25.2M) | 775M (logged MFU reads ~926M, see below) | speedrun, most large models |
+| `abl_untied` | `model.tie_embeddings=false` | Separate output matrix instead of reusing the input embedding | 136.2M (+25.2M) | 775M (see below) | speedrun, most large models |
 | `abl_llama` | rope + rmsnorm + swiglu + `bias=false` | The Llama bundle | 110.1M | ~774M | exports to `LlamaForCausalLM` |
 | `abl_qwen3` | the Llama bundle + `qk_norm=true` | The Qwen3 bundle | 110.1M | ~774M | exports to `Qwen3ForCausalLM` |
 
-Untying adds parameters but no matmul work (the input embedding is a table lookup). The training log's MFU uses 6 × parameters, which counts the second matrix as if it were multiplied; compare **tokens/s**, not MFU, for that run.
+Untying adds parameters but no matmul work (the input embedding is a table lookup). The training log's MFU counts 6 × the parameters that are multiplied, so for an untied model it leaves the input table out (6 × all parameters would read ~926M); the logged MFU is comparable across all rows, and so are **tokens/s**.
 
 ### The export rule
 
@@ -142,7 +142,7 @@ Go straight on to 06.3 on the same box, or terminate it (all logs and `DONE` mar
 |---|---|---|
 | A run shows the same val bpb as the control to 4 decimals | The override did not apply (typo in the key, or the line still commented) | `grep params runs/<name>/train.out`; the queue prints each command, check it; fix the line and rerun under a new name |
 | `KeyError: unknown ModelConfig keys` | Misspelled key, for example `model.qknorm` | Use the exact keys: `pos_emb`, `norm`, `mlp`, `qk_norm`, `bias`, `tie_embeddings` |
-| `abl_untied` is ~15% slower than the others | Extra memory traffic for the second 25M matrix, or MFU misread | Compare tokens/s; a few percent slower is expected, much more points to the host |
+| `abl_untied` is ~15% slower than the others | Extra memory traffic for the second 25M matrix | Compare tokens/s; a few percent slower is expected, much more points to the host |
 | A bundle diverges (NaN) at the control's LR | Unusual at 6e-4, but possible with a bad host or data | Look at grad norms before the NaN; rerun once; if it repeats, report it and use the other bundle |
 | You want "RoPE + GELU" because it scored best | Not exportable | Treat it as evidence that RoPE helps; choose the exportable bundle that contains RoPE |
 

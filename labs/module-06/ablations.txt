@@ -25,7 +25,7 @@ abl_control_s1338   train.seed=1338
 # abl_arch_lr3e-4     ARCH train.lr=3e-4
 # abl_arch_lr1.2e-3   ARCH train.lr=1.2e-3
 # abl_arch_wsd        ARCH train.schedule=wsd train.decay_frac=0.2 train.min_lr_ratio=0.0
-# abl_arch_muon       ARCH train.optimizer=muon train.muon_lr=0.02 train.weight_decay=0.0
-# abl_arch_muon_lr01  ARCH train.optimizer=muon train.muon_lr=0.01 train.weight_decay=0.0
-# abl_arch_muon_lr04  ARCH train.optimizer=muon train.muon_lr=0.04 train.weight_decay=0.0
-# abl_arch_muon_wsd   ARCH train.optimizer=muon train.muon_lr=0.02 train.weight_decay=0.0 train.schedule=wsd train.decay_frac=0.2 train.min_lr_ratio=0.0
+# abl_arch_muon       ARCH train.optimizer=muon train.muon_lr=0.02 train.muon_weight_decay=0.0
+# abl_arch_muon_lr01  ARCH train.optimizer=muon train.muon_lr=0.01 train.muon_weight_decay=0.0
+# abl_arch_muon_lr04  ARCH train.optimizer=muon train.muon_lr=0.04 train.muon_weight_decay=0.0
+# abl_arch_muon_wsd   ARCH train.optimizer=muon train.muon_lr=0.02 train.muon_weight_decay=0.0 train.schedule=wsd train.decay_frac=0.2 train.min_lr_ratio=0.0

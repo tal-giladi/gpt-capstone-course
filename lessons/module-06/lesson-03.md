@@ -57,7 +57,7 @@ What this means for you: expect Muon to win at ~110M parameters by a margin that
 ### How `mygpt` implements them
 
 - `train.optimizer=muon`: Muon updates every 2D matrix inside the transformer blocks (attention and MLP weights), with momentum 0.95 (Nesterov), 5 Newton–Schulz steps, and the update scaled by $\sqrt{\max(1, \text{rows}/\text{cols})}$. Embeddings, the output head, norms and biases stay on AdamW with `train.lr`. Both follow the same schedule. Under DDP each matrix is orthogonalised on one rank and broadcast, so checkpoints from rank 0 are complete.
-- `train.weight_decay` is **shared** by both optimizers. For Muon, decay is applied as $p \leftarrow p\,(1 - \text{lr}\cdot\text{wd})$ with Muon's LR of ~0.02, so 0.1 would shrink block weights 30× harder per step than AdamW's 6e-4 × 0.1. The Muon runs therefore use `weight_decay=0.0` (as `main_350m.yaml` does), which also turns off AdamW's decay on the embeddings. That is a confound you note in the table; it is the configuration you would ship.
+- Weight decay is **separate** per optimizer: `train.weight_decay` (0.1) applies to the AdamW groups (embeddings, head) and `train.muon_weight_decay` (default 0.0) to the Muon block matrices. For Muon, decay is applied as $p \leftarrow p\,(1 - \text{lr}\cdot\text{wd})$ with Muon's LR of ~0.02, so 0.1 would shrink block weights ~33× harder per step than AdamW's 6e-4 × 0.1. The Muon runs therefore use `muon_weight_decay=0.0` (as `main_350m.yaml` does) and keep AdamW's 0.1 on the embeddings, so the only change against the AdamW runs is the optimizer of the block matrices.
 - `train.schedule=wsd`: warmup, constant LR, then linear decay over the last `decay_frac` (0.2) of steps to `min_lr_ratio` (0.0 in these runs). Cosine in the control decays to 10%; the end-of-run comparison absorbs that difference.
 
 ### The runs
@@ -69,7 +69,7 @@ All on top of your architecture (the `@ARCH` macro in `ablations.txt`; edit it i
 | control | your 06.2 winner (AdamW 6e-4, cosine) | |
 | `abl_arch_lr3e-4`, `abl_arch_lr1.2e-3` | `train.lr=3e-4` / `1.2e-3` | Is 6e-4 the right AdamW LR? Muon must beat the **best** AdamW, not the default |
 | `abl_arch_wsd` | AdamW + `schedule=wsd decay_frac=0.2 min_lr_ratio=0.0` | Does WSD lose anything against cosine? |
-| `abl_arch_muon`, `_muon_lr01`, `_muon_lr04` | `optimizer=muon muon_lr=0.02/0.01/0.04 weight_decay=0.0` | Does Muon win, and is 0.02 near its best LR? |
+| `abl_arch_muon`, `_muon_lr01`, `_muon_lr04` | `optimizer=muon muon_lr=0.02/0.01/0.04 muon_weight_decay=0.0` | Does Muon win, and is 0.02 near its best LR? |
 | `abl_arch_muon_wsd` | Muon 0.02 + WSD | The likely main-run combination, measured as a whole |
 
 Muon adds a few percent of time per step (Newton–Schulz on each matrix); 7 runs ≈ 4.4 GPU-h ≈ $12 at $2.69/h.
@@ -120,12 +120,12 @@ python tools/ablation_table.py "runs/abl_*" --queue tools/ablations.txt --contro
 
 | Result | Main-run recipe |
 |---|---|
-| Best Muon beats best AdamW beyond the threshold | `optimizer: muon`, `muon_lr` = best Muon LR, `weight_decay: 0.0`, `lr` (AdamW part) = best AdamW LR |
+| Best Muon beats best AdamW beyond the threshold | `optimizer: muon`, `muon_lr` = best Muon LR, `muon_weight_decay: 0.0`, `weight_decay: 0.1` (AdamW part), `lr` (AdamW part) = best AdamW LR |
 | Muon within noise of the best AdamW | AdamW at its best LR is the simpler, better-understood choice; Muon is acceptable if you prefer the speedrun-style recipe, but write that the evidence was neutral |
 | WSD within noise of cosine (or better) | `schedule: wsd`, `decay_frac: 0.2`, `min_lr_ratio: 0.0`: same loss, and in Module 7 you can stop the stable phase early and still decay to a usable model |
 | WSD worse beyond the threshold | Keep cosine and look at the WSD run's decay (did it reach the end?) |
 
-Write the recipe under the table, for example: `Optimizer: Muon (muon_lr 0.02) + AdamW 6e-4 for embeddings/head, wd 0.0, WSD decay_frac 0.2. Best Muon -0.0xx bpb vs best AdamW (lr 1.2e-3); threshold 0.00x.` Then merge `results/ablations-opt.md` into `results/ablations.md` under a heading `## Optimizer and schedule (control: abl_qwen3)`.
+Write the recipe under the table, for example: `Optimizer: Muon (muon_lr 0.02) + AdamW 6e-4 for embeddings/head, wd 0.1 AdamW / 0.0 Muon, WSD decay_frac 0.2. Best Muon -0.0xx bpb vs best AdamW (lr 1.2e-3); threshold 0.00x.` Then merge `results/ablations-opt.md` into `results/ablations.md` under a heading `## Optimizer and schedule (control: abl_qwen3)`.
 
 ### 6. Terminate the box
 
@@ -143,7 +143,7 @@ Write the recipe under the table, for example: `Optimizer: Muon (muon_lr 0.02) +
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Muon loss stalls or rises after ~200 steps | `weight_decay` 0.1 with Muon's LR shrinks the block weights each step | Rerun with `train.weight_decay=0.0` under a new name |
+| Muon loss stalls or rises after ~200 steps | `muon_weight_decay` 0.1 with Muon's LR shrinks the block weights each step | Rerun with `train.muon_weight_decay=0.0` (the default) under a new name |
 | Muon loss diverges (NaN) at 0.04 | LR too high for this model | Report it; 0.04 is outside the stable range, use the best stable LR |
 | `abl_arch_lr1.2e-3` diverges but the QK-norm architecture was supposed to allow higher LRs | Too high anyway, or a different problem (data, host) | Look at the step and grad norms; one NaN at 2× LR is still information: stay at or below 6e-4–1.2e-3 |
 | WSD run's final value looks bad and its LR column never decayed | `schedule=wsd` with `decay_frac=0` or a typo | Check the `lr` column in the last 20% of the log; rerun with the exact overrides |

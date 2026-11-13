@@ -3,15 +3,15 @@
     Your 8-GPU node dies at step 7,640 of the baseline. You rent a new node, clone the repo and are
     about to relaunch the same command. What do you do first?
   options:
-    - Nothing extra; auto-resume pulls the newest checkpoint and the full log from the bucket.
+    - Delete the bucket's log.jsonl, so the resumed run starts a clean log without duplicate steps.
     - Start a new out_dir, because a checkpoint from another machine cannot be resumed safely.
     - Copy the step-7,000 checkpoint into place and lower the LR, since the node died for a reason.
     - Run `sync.sh pull-ckpt` for the run to bring back the checkpoint and the log.
   correct: 3
   explanation: >-
-    Auto-resume would pull only the checkpoint and start a fresh log.jsonl that later overwrites the
-    longer one in the bucket. Pulling checkpoint and log first keeps one continuous history; a dead node
-    is not a reason to change the training recipe.
+    Pulling the newest checkpoint and log.jsonl first keeps one continuous history and lets you check
+    what came back before paying for GPU time; deleting the bucket log throws that history away. A dead
+    node is not a reason to change the training recipe.
 - id: q2
   question: >-
     You consider lowering `ckpt_every` from 1000 to 100 for the baseline, where 1000 steps take about

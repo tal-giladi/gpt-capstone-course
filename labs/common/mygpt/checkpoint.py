@@ -69,7 +69,8 @@ def rclone_push(path: str, remote: str, wait: bool = False):
 
 
 def rclone_pull_latest(remote: str, out_dir: str) -> str | None:
-    """Download the newest ckpt_*.pt from REMOTE into out_dir (used when the box is new)."""
+    """Download the newest ckpt_*.pt from REMOTE into out_dir (used when the box is new),
+    plus the run's log.jsonl if out_dir has none, so the resumed run appends to the full log."""
     if not remote or not have_rclone():
         return None
     res = subprocess.run(["rclone", "lsf", remote, "--include", "ckpt_*.pt"], capture_output=True, text=True)
@@ -79,4 +80,8 @@ def rclone_pull_latest(remote: str, out_dir: str) -> str | None:
     os.makedirs(out_dir, exist_ok=True)
     print(f"[ckpt] pulling {names[-1]} from {remote}")
     subprocess.run(["rclone", "copy", f"{remote.rstrip('/')}/{names[-1]}", out_dir], check=True)
+    if not os.path.exists(os.path.join(out_dir, "log.jsonl")):
+        res = subprocess.run(["rclone", "copy", f"{remote.rstrip('/')}/log.jsonl", out_dir])
+        if res.returncode != 0:
+            print(f"[ckpt] WARNING: could not pull log.jsonl from {remote}")
     return os.path.join(out_dir, names[-1])

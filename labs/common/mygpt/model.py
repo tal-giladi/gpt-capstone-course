@@ -161,8 +161,14 @@ class GPT(nn.Module):
         return n
 
     def flops_per_token(self, seq_len: int) -> float:
-        """Training FLOPs/token (fwd+bwd): 6N plus attention 12*L*d*T (PaLM appendix B)."""
+        """Training FLOPs/token (fwd+bwd): 6N plus attention 12*L*d*T (PaLM appendix B).
+
+        N counts only parameters used in a matmul: the learned position table (wpe) is a
+        lookup, and so is the input embedding wte when untied. When tied, wte is also the
+        lm_head matrix, so it stays in N."""
         n = self.num_params() - (self.transformer.wpe.weight.numel() if "wpe" in self.transformer else 0)
+        if not self.cfg.tie_embeddings:
+            n -= self.transformer.wte.weight.numel()
         return 6 * n + 12 * self.cfg.n_layer * self.cfg.n_embd * seq_len
 
     def forward(self, idx, targets=None):

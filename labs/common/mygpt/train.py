@@ -24,7 +24,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from .checkpoint import latest_checkpoint, load_checkpoint, rclone_pull_latest, rclone_push, save_checkpoint
 from .config import Config, load_config
 from .data import DistributedTokenLoader, make_synthetic_shards, read_meta, resolve_tokenizer
-from .evaluate import bits_per_byte, hellaswag, val_bytes_per_token, val_loss
+from .evaluate import bits_per_byte, hellaswag, load_hellaswag, val_bytes_per_token, val_loss
 from .model import GPT
 from .muon import Muon
 
@@ -67,7 +67,9 @@ def autocast_ctx(device: str, dtype: str):
 
 def build_optimizer(model: GPT, t, device: str) -> list[torch.optim.Optimizer]:
     """AdamW for everything, or Muon for 2D block matrices + AdamW for the rest
-    (embeddings, lm_head, norms, biases). Weight decay only on >=2D tensors."""
+    (embeddings, lm_head, norms, biases). In AdamW, `weight_decay` applies to >=2D tensors
+    only. Muon groups use their own `muon_weight_decay`: Muon decays as p *= 1 - muon_lr * wd,
+    and with muon_lr ~0.02 the AdamW value of 0.1 would shrink the blocks far too hard."""
     fused = device.startswith("cuda")
     params = dict(model.named_parameters())  # tied lm_head/wte appears once
     if t.optimizer == "muon":
@@ -81,7 +83,7 @@ def build_optimizer(model: GPT, t, device: str) -> list[torch.optim.Optimizer]:
                                {"params": no_decay, "weight_decay": 0.0}],
                               lr=t.lr, betas=(0.9, 0.95), eps=1e-8, fused=fused)]
     if muon_p:
-        opts.append(Muon(muon_p, lr=t.muon_lr, momentum=0.95, weight_decay=t.weight_decay))
+        opts.append(Muon(muon_p, lr=t.muon_lr, momentum=0.95, weight_decay=t.muon_weight_decay))
     for opt in opts:
         for g in opt.param_groups:
             g["base_lr"] = g["lr"]
@@ -117,6 +119,10 @@ def train(cfg: Config) -> dict:
     m, t = cfg.model, cfg.train
     rank, local_rank, world, device, ddp = setup_dist()
     master = rank == 0
+    # Seeding with seed + rank makes each rank initialise *different* weights below. That is
+    # fine: DDP broadcasts rank 0's parameters (and buffers) to all ranks when it wraps the
+    # model, so training starts from identical weights everywhere. The per-rank seed only
+    # matters for things that should differ per rank (e.g. dropout masks).
     torch.manual_seed(t.seed + rank)
     if device.startswith("cuda"):
         torch.set_float32_matmul_precision("high")
@@ -160,7 +166,7 @@ def train(cfg: Config) -> dict:
     if master and t.ckpt_remote and latest_checkpoint(t.out_dir) is None:
         rclone_pull_latest(t.ckpt_remote, t.out_dir)
     barrier()
-    start_step, last_good = 0, None
+    start_step, last_good, skipped = 0, None, 0
     ck_path = latest_checkpoint(t.out_dir)
     if ck_path:
         ck = load_checkpoint(ck_path, map_location="cpu")
@@ -174,6 +180,13 @@ def train(cfg: Config) -> dict:
         start_step, last_good = ck["step"], ck_path
         if master:
             print(f"[train] resumed from {ck_path} at step {start_step}")
+        # skip_batches: jump the data past a stretch that keeps producing NaNs. Applied once:
+        # if the checkpoint was written by a run that already used this value, don't skip again.
+        skip_done = ck["config"]["train"].get("skip_batches", 0)
+        if t.skip_batches and t.skip_batches != skip_done:
+            for _ in range(t.skip_batches * accum):
+                train_loader.next_batch()
+            skipped = t.skip_batches
         del ck
     if t.compile:
         model = torch.compile(model)
@@ -186,18 +199,25 @@ def train(cfg: Config) -> dict:
         n = raw_model.num_params()
         print(f"[train] params {n / 1e6:.1f}M | world {world} | micro {B}x{T} | accum {accum} | "
               f"steps {total_steps} | device {device} | dtype {t.dtype}")
-    tok = None
+    tok, hs_examples = None, None
     tok_name = resolve_tokenizer(data_dir, meta)
     if t.hellaswag_every and tok_name not in (None, "synthetic"):
         from .tokenizer import get_tokenizer
         tok = get_tokenizer(tok_name)
+        # Rank 0 downloads (if needed) first; the others read the finished file after the barrier.
+        if master:
+            hs_examples = load_hellaswag()
+        barrier()
+        if not master:
+            hs_examples = load_hellaswag()
     vt, vb = val_bytes_per_token(meta)
 
     run = None
     if master and t.wandb_project:
         import wandb
         run = wandb.init(project=t.wandb_project, name=t.run_name, id=t.run_name, resume="allow", config=cfg.to_dict())
-    log_f = open(os.path.join(t.out_dir, "log.jsonl"), "a", encoding="utf-8") if master else None
+    log_path = os.path.join(t.out_dir, "log.jsonl")
+    log_f = open(log_path, "a", encoding="utf-8") if master else None
 
     stop = {"flag": False}
 
@@ -208,10 +228,10 @@ def train(cfg: Config) -> dict:
 
     old_handler = signal.signal(signal.SIGTERM, on_sigterm)
     flops_tok, peak = raw_model.flops_per_token(T), peak_flops(device)
-    upload = None
+    uploads: list = []
 
     def checkpoint(step_done: int) -> str | None:
-        nonlocal upload, last_good
+        nonlocal uploads, last_good
         path = None
         if master:
             state = {"model": raw_model.state_dict(), "optimizers": [o.state_dict() for o in optimizers],
@@ -220,9 +240,12 @@ def train(cfg: Config) -> dict:
             path = save_checkpoint(t.out_dir, step_done, state, t.keep_last)
             last_good = path
             if t.ckpt_remote:
-                if upload is not None:
-                    upload.wait()
-                upload = rclone_push(path, t.ckpt_remote)
+                for proc in uploads:
+                    proc.wait()
+                # The log goes up with every checkpoint, so the bucket's log.jsonl never lags
+                # its newest checkpoint by more than one interval (e.g. after a SIGKILL).
+                uploads = [p for p in (rclone_push(path, t.ckpt_remote),
+                                       rclone_push(log_path, t.ckpt_remote)) if p is not None]
         barrier()
         return path
 
@@ -232,6 +255,12 @@ def train(cfg: Config) -> dict:
             log_f.flush()
             if run is not None:
                 run.log(rec, step=rec["step"])
+
+    if skipped:
+        if master:
+            print(f"[train] skip_batches={skipped}: advanced the train loader {skipped} global batches "
+                  f"({skipped * t.total_batch_tokens} tokens) past the step-{start_step} position")
+        log({"step": start_step, "skip_batches": skipped, "skipped_tokens": skipped * t.total_batch_tokens})
 
     t_last, steps_since = time.time(), 0
     exit_code, stopped = 0, False
@@ -294,7 +323,7 @@ def train(cfg: Config) -> dict:
                     print(f"step {step_done:>6} | val_loss {rec['val_loss']:.4f} | val_bpb {rec['val_bpb']:.4f}")
             if tok is not None and (step_done % t.hellaswag_every == 0 or last):
                 rec = rec or {"step": step_done}
-                rec["hellaswag"] = hellaswag(raw_model, tok, device, ctx, rank=rank, world=world)
+                rec["hellaswag"] = hellaswag(raw_model, tok, device, ctx, examples=hs_examples, rank=rank, world=world)
                 if master:
                     print(f"step {step_done:>6} | hellaswag acc_norm {rec['hellaswag']:.4f}")
             if rec is not None:
@@ -316,17 +345,17 @@ def train(cfg: Config) -> dict:
     finally:
         signal.signal(signal.SIGTERM, old_handler)
         if master:
-            if upload is not None:
-                upload.wait()
+            for proc in uploads:
+                proc.wait()
             if t.ckpt_remote:
-                rclone_push(os.path.join(t.out_dir, "log.jsonl"), t.ckpt_remote, wait=True)
+                rclone_push(log_path, t.ckpt_remote, wait=True)
             log_f.close()
             if run is not None:
                 run.finish()
         if ddp:
             dist.destroy_process_group()
     return {"exit_code": exit_code, "stopped": stopped, "last_checkpoint": last_good, "last_loss": last_loss,
-            "log": os.path.join(t.out_dir, "log.jsonl")}
+            "log": log_path}
 
 
 def main(argv=None):

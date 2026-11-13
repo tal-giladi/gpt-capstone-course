@@ -43,7 +43,7 @@ You have a written, tested recovery procedure: what `mygpt.train` saves and wher
 
 ### What a checkpoint holds
 
-`mygpt.train` writes `out_dir/ckpt_<step>.pt` every `ckpt_every` optimizer steps, at the end, and after a SIGTERM. Each file holds the model, every optimizer's state, the step, the data loader position, the RNG states and the full config. It is written to a `.tmp` file first and renamed, so a kill in the middle of a save never leaves a broken "latest" checkpoint. Only the newest `keep_last` stay on local disk. With `ckpt_remote` set, each new checkpoint is copied to the bucket in the background with `rclone copy`; the final `log.jsonl` is copied when the run ends or stops cleanly.
+`mygpt.train` writes `out_dir/ckpt_<step>.pt` every `ckpt_every` optimizer steps, at the end, and after a SIGTERM. Each file holds the model, every optimizer's state, the step, the data loader position, the RNG states and the full config. It is written to a `.tmp` file first and renamed, so a kill in the middle of a save never leaves a broken "latest" checkpoint. Only the newest `keep_last` stay on local disk. With `ckpt_remote` set, each new checkpoint is copied to the bucket in the background with `rclone copy`, together with the current `log.jsonl`; the final `log.jsonl` is copied again when the run ends or stops cleanly.
 
 | Run | Weights fp32 | Optimizer state | Checkpoint file |
 |---|---|---|---|
@@ -143,10 +143,10 @@ bash scripts/sync.sh pull-ckpt drill runs/drill
 bash drill.sh drill                   # -> resumed from ... ckpt_00000200.pt (or 250) at step 200
 ```
 
-`mygpt.train` would also pull the newest checkpoint by itself (because `ckpt_remote` is set and `out_dir` is empty), but only the checkpoint. The bucket's `log.jsonl` is only updated when a run ends or stops cleanly, so after a SIGKILL it is behind; `pull-ckpt` brings back whatever history is there, and W&B (same run id = `run_name`) has the complete curves.
+`mygpt.train` would also pull the newest checkpoint by itself (because `ckpt_remote` is set and `out_dir` is empty), together with the bucket's `log.jsonl`. That log is uploaded with every checkpoint, so after a SIGKILL it ends at about the newest checkpoint in the bucket; the steps after it are missing from the log, but the resume re-runs them anyway. W&B (same run id = `run_name`) has the complete curves.
 
 > [!IMPORTANT]
-> On a real new box, always `sync.sh pull-ckpt <run> runs/<run>` before relaunching. If you let the run start with an empty `out_dir`, it writes a fresh `log.jsonl` that only begins at the resume step, and at the end it overwrites the longer one in the bucket.
+> On a real new box, `sync.sh pull-ckpt <run> runs/<run>` before relaunching, so you can check what came back before the GPUs start. Auto-resume pulls the log only into an `out_dir` that has no `log.jsonl`; a run that starts with a fresh log begins at the resume step, and at the end it overwrites the longer one in the bucket.
 
 ### 6. Compare with the reference (3 min)
 
@@ -154,7 +154,7 @@ bash drill.sh drill                   # -> resumed from ... ckpt_00000200.pt (or
 python tools/run_summary.py runs/drill --compare runs/drill_ref
 ```
 
-Look at two things. `resumes` and the step list show the history the log kept: the part pulled from the bucket (up to the SIGTERM stop of drill A, the last clean upload) and then everything from the drill C resume onward; the steps in between survive only in W&B and in `runs/drill_lost/log.jsonl`. That gap is exactly why you pull the log before relaunching. The `compare` block shows the train-loss difference to the reference at the steps both logs contain, including the final step 300. On CPU a resumed run matches bit for bit (the project's tests check this); on GPUs non-deterministic kernels make differences of up to ~0.01–0.02 normal. A jump of 0.1 or more right after a resume means something was not restored (wrong data position or a fresh optimizer).
+Look at two things. `resumes` and the step list show the history the log kept: the part pulled from the bucket (up to the last checkpoint upload before the SIGKILL, step 200 or 250) and then everything from the drill C resume onward, which starts at that same checkpoint, so there is no gap. Without the pulled log, everything before the resume would be missing, which is why you pull the log before relaunching. The `compare` block shows the train-loss difference to the reference at the steps both logs contain, including the final step 300. On CPU a resumed run matches bit for bit (the project's tests check this); on GPUs non-deterministic kernels make differences of up to ~0.01–0.02 normal. A jump of 0.1 or more right after a resume means something was not restored (wrong data position or a fresh optimizer).
 
 ### 7. Optional drill D: finish on fewer GPUs (3 min)
 
@@ -216,7 +216,7 @@ Copy `reports/drill-05.2.md` to your laptop or push it, then terminate the pod.
 | After SIGTERM, torchrun prints `SignalException` and a worker was killed before saving | The save took longer than torchrun's 30 s grace (slow disk, huge checkpoint) | Send SIGTERM to the workers too (`pkill -TERM -f mygpt.train` reaches both); resume from the interval checkpoint |
 | Loss jumps by 0.1+ right after a resume | Data position or optimizer state not restored (e.g. you loaded weights manually into a new run) | Resume only through `mygpt.train` auto-resume from a complete checkpoint |
 | `rclone lsf` shows no checkpoints in `ckpt/<run>/` | `ckpt_remote` empty or misspelled, or rclone not configured in this shell | `grep ckpt_remote runs/<run>.out`; check `rclone lsf r2:mygpt/`; never start a long run without seeing the first upload |
-| The log in the bucket is shorter than the run | The run was SIGKILLed; the log is uploaded only on a clean end or stop | W&B has the full history; on a new box `sync.sh pull-ckpt` before relaunching |
+| The log in the bucket is shorter than the run | The run was SIGKILLed; the log is uploaded with each checkpoint and on a clean end or stop, so it ends near the newest checkpoint | Expected: the resume re-runs those steps; on a new box `sync.sh pull-ckpt` before relaunching |
 | Disk full while saving | Checkpoints of several runs plus shards on a small disk | `keep_last` limits one run; remove old run dirs that are safely in the bucket |
 
 ## Artifact

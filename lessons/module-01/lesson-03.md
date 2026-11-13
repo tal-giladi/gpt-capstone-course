@@ -160,14 +160,14 @@ Add the repo URL and your bucket name placeholder (`r2:mygpt`, created in 02.2) 
 
 ## How you know it worked
 
-- `pytest -q` ends with a line like `100 passed in 103.46s` (the count grows as the course adds tests; anything with `failed` or `error` is not done). On a 2024–2026 laptop it takes one to two minutes.
+- `pytest -q` ends with a line like `110 passed in 204.59s` (the count grows as the course adds tests; anything with `failed` or `error` is not done). On a 2024–2026 laptop it takes two to four minutes.
 - The smoke run prints a parameter line and falling loss, ending in about half a minute. Measured on 2026-11-13 on a Windows laptop:
 
   ```text
   [train] params 0.1M | world 1 | micro 8x64 | accum 2 | steps 20 | device cpu | dtype fp32
-  step      1/20 | loss 5.5691 | lr 5.00e-03 | gnorm 0.82 | 5.6k tok/s | mfu 0.0%
+  step      1/20 | loss 5.5691 | lr 5.00e-03 | gnorm 0.82 | 5.6k tok/s | mfu n/a
   step     10 | val_loss 4.8439 | val_bpb 6.9883
-  step     20/20 | loss 4.2751 | lr 1.07e-03 | gnorm 0.69 | 6.4k tok/s | mfu 0.0%
+  step     20/20 | loss 4.2751 | lr 1.07e-03 | gnorm 0.69 | 6.4k tok/s | mfu n/a
   step     20 | val_loss 4.2578 | val_bpb 6.1428
   ```
 

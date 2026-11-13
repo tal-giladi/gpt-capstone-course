@@ -4,6 +4,7 @@ The final, reportable numbers come from lm-eval-harness on the exported HF model
 these are cheap signals to watch during training.
 
 CLI: python -m mygpt.evaluate --ckpt runs/x/ckpt_00010000.pt [--data-dir DIR] [--hellaswag 1000]
+     (--ckpt may also be a run dir: its newest ckpt_*.pt is used)
 """
 from __future__ import annotations
 
@@ -64,7 +65,15 @@ def load_hellaswag(path: str | None = None, cache_dir: str | None = None) -> lis
         os.makedirs(cache_dir, exist_ok=True)
         path = os.path.join(cache_dir, "hellaswag_val.jsonl")
         if not os.path.exists(path):
-            urllib.request.urlretrieve(HELLASWAG_URL, path)
+            # Download to a per-process temp file and rename atomically, so concurrent ranks
+            # never read a half-written file or interleave writes into the same one.
+            tmp = f"{path}.{os.getpid()}.tmp"
+            try:
+                urllib.request.urlretrieve(HELLASWAG_URL, tmp)
+                os.replace(tmp, path)
+            finally:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
     with open(path, encoding="utf-8") as f:
         return [json.loads(line) for line in f if line.strip()]
 
@@ -121,28 +130,33 @@ def hellaswag(model, tok, device, ctx=nullcontext(), limit: int | None = None,
 
 def main(argv=None):
     p = argparse.ArgumentParser(description="Evaluate a mygpt checkpoint (val loss, bpb, HellaSwag).")
-    p.add_argument("--ckpt", required=True)
+    p.add_argument("--ckpt", required=True, help="checkpoint file, or a run dir (newest ckpt_*.pt)")
     p.add_argument("--data-dir", default=None, help="shards dir (default: the run's data_dir)")
     p.add_argument("--eval-tokens", type=int, default=10_485_760)
     p.add_argument("--hellaswag", type=int, default=0, help="number of HellaSwag examples (0 = skip, -1 = all)")
     p.add_argument("--tokenizer", default=None, help="gpt2 | DIR (default: from shards meta.json)")
     args = p.parse_args(argv)
 
-    from .checkpoint import load_checkpoint
+    from .checkpoint import latest_checkpoint, load_checkpoint
     from .config import config_from_dict
     from .data import DistributedTokenLoader, read_meta, resolve_tokenizer
     from .model import GPT
     from .tokenizer import get_tokenizer
 
+    ckpt = args.ckpt
+    if os.path.isdir(ckpt):
+        ckpt = latest_checkpoint(ckpt)
+        if ckpt is None:
+            raise SystemExit(f"no ckpt_*.pt in {args.ckpt}")
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    ck = load_checkpoint(args.ckpt)
+    ck = load_checkpoint(ckpt)
     cfg = config_from_dict(ck["config"])
     model = GPT(cfg.model).to(device)
     model.load_state_dict(ck["model"])
     ctx = torch.autocast("cuda", dtype=torch.bfloat16) if device == "cuda" else nullcontext()
     data_dir = args.data_dir or cfg.train.data_dir
     meta = read_meta(data_dir)
-    out = {"ckpt": args.ckpt, "step": ck["step"]}
+    out = {"ckpt": ckpt, "step": ck["step"]}
     if os.path.isdir(data_dir):
         B, T = cfg.train.micro_batch_size, cfg.train.seq_len
         loader = DistributedTokenLoader(data_dir, "val", B, T, device=device)

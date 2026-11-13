@@ -59,7 +59,8 @@ class TrainConfig:
     decay_frac: float = 0.2           # wsd: fraction of steps spent decaying
     optimizer: str = "adamw"          # adamw | muon
     muon_lr: float = 0.02
-    weight_decay: float = 0.1
+    weight_decay: float = 0.1         # AdamW groups only (>=2D tensors: embeddings, lm_head, ...)
+    muon_weight_decay: float = 0.0    # Muon groups only; applied as p *= 1 - muon_lr * wd
     grad_clip: float = 1.0
     dtype: str = "bf16"               # bf16 | fp32
     compile: bool = False
@@ -74,6 +75,7 @@ class TrainConfig:
     ckpt_remote: str = ""             # rclone remote path, e.g. r2:my-bucket/ckpt/run1 ("" = off)
     wandb_project: str = ""           # "" = off
     log_every: int = 10
+    skip_batches: int = 0             # on resume, advance the loader this many global batches (optimizer steps)
 
     def __post_init__(self):
         assert self.schedule in ("cosine", "wsd"), self.schedule

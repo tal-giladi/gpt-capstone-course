@@ -116,7 +116,7 @@ Then compare with what is left. Example: actuals through Module 6 of $105 leave 
 Open `configs/main_350m.yaml` and set:
 
 - `model`: your switches from 06.2 (`pos_emb`, `norm`, `mlp`, `qk_norm`, `bias`, `tie_embeddings`); keep `n_layer: 24`, `n_head: 16`, `n_embd: 1024`, `block_size: 1024`, `vocab_size: 32768`.
-- `train`: `optimizer`, `muon_lr`, `lr`, `weight_decay`, `schedule`, `decay_frac`, `min_lr_ratio` from 06.3 with the transfer rules above; `train_tokens` from the data check; `ckpt_remote: r2:mygpt/ckpt/main_350m`; `wandb_project: my-gpt`; `run_name: main_350m`.
+- `train`: `optimizer`, `muon_lr`, `lr`, `weight_decay` (AdamW), `muon_weight_decay` (Muon), `schedule`, `decay_frac`, `min_lr_ratio` from 06.3 with the transfer rules above; `train_tokens` from the data check; `ckpt_remote: r2:mygpt/ckpt/main_350m`; `wandb_project: my-gpt`; `run_name: main_350m`.
 
 Replace the header comment with three lines: what this run is, the date, and "see decisions/0001-main-run-recipe.md".
 
@@ -193,7 +193,7 @@ Ablations at 124M-class, 1B tokens, 1xH100 (results/ablations.md): seed spread <
 
 ### Decision
 - Architecture: <Qwen3 | Llama | GPT-2> bundle, <tied | untied>, 24x1024, 16 heads, ctx 1024, vocab 32768 (own BPE). Exports to <class>.
-- Optimizer: <Muon muon_lr x + AdamW lr x | AdamW lr x>, weight_decay <x>, grad_clip 1.0.
+- Optimizer: <Muon muon_lr x + AdamW lr x | AdamW lr x>, weight_decay <x> (AdamW), muon_weight_decay <x>, grad_clip 1.0.
 - Schedule: <WSD decay_frac 0.2 to 0 | cosine to 10%>, warmup 250M tokens.
 - Size: 337M params, <20B> tokens (59 tokens/param, ~3x Chinchilla), batch 524,288, 38,146 steps.
 
@@ -230,7 +230,7 @@ git tag recipe-v1 && git push && git push --tags
 | Parameter count far from 337M (or 371M untied) | Wrong `n_embd`, `n_layer` or `vocab_size` | Compare with the template; the switches move the count by about 1M at most, the shape must not change |
 | Data check: fewer train tokens than `train_tokens` | Fewer files tokenized or decontamination dropped documents | Set `train_tokens` to ~97% of the train tokens in `meta.json`; one epoch, no repeats |
 | Cost check says shrink, but you want 350M | Prices rose or the run was slower than planned | Cut tokens to 15B first (still 44 tokens/param); a cheaper verified 8× host second; the model size last |
-| LR check: both 350M runs diverge | LR from 124M too high for 350M, or Muon with weight decay left on | Halve the LR and recheck one run; check `weight_decay` for Muon |
+| LR check: both 350M runs diverge | LR from 124M too high for 350M, or Muon with weight decay turned on | Halve the LR and recheck one run; check `muon_weight_decay` is 0.0 |
 | Someone edits the config on the box later | The recipe was not frozen | Launch only from a commit at or after `recipe-v1`; record the commit in `budget.md` at launch (07.1) |
 
 ## Artifact

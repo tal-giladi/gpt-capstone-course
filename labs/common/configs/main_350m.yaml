@@ -31,7 +31,8 @@ train:
   decay_frac: 0.2
   optimizer: muon
   muon_lr: 0.02
-  weight_decay: 0.0
+  weight_decay: 0.1          # AdamW groups only (embeddings, head)
+  muon_weight_decay: 0.0     # Muon groups only (block matrices)
   grad_clip: 1.0
   dtype: bf16
   compile: true

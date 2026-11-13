@@ -28,18 +28,18 @@
     price can turn into a higher price per token.
 - id: q3
   question: >-
-    Your first 2-GPU launch crashes at step 50 with a JSON decode error while loading HellaSwag; the
-    single-GPU smoke test never had this problem. What is the most likely cause and fix?
+    Your first 2-GPU launch crashes right after the `[train] params` line with a `URLError` from
+    `load_hellaswag`; the CPU smoke test never had this problem. What is the most likely cause and fix?
   options:
-    - Both processes wrote the same file at once; download it before `torchrun`, then relaunch.
+    - The box cannot reach GitHub; fix the network or copy the file into the cache, then relaunch.
     - The GPT-2 tokenizer cannot encode HellaSwag; switch `hellaswag_every` to 0 for the baseline run.
     - The 4090s ran out of memory during evaluation; lower `micro_batch_size` and start a new out_dir.
-    - The checkpoint at step 50 was corrupted; delete `runs/rehearsal` and start the rehearsal again.
+    - The checkpoint directory is corrupted; delete `runs/rehearsal` and start the rehearsal again.
   correct: 0
   explanation: >-
-    Under torchrun every rank calls the loader, so two processes can write the same cache file
-    concurrently and one reads a half-written file. Pre-downloading removes the race, and the relaunch
-    resumes from the step-50 checkpoint.
+    The smoke config has HellaSwag off; with it on, rank 0 downloads the file at startup (the other
+    ranks wait for it), so a host without access to GitHub fails there. The step 5 pre-download catches
+    this before the GPUs are busy; once the file is cached the relaunch works.
 - id: q4
   question: >-
     A friend says `vocab_size: 50304` makes your baseline "not GPT-2", because GPT-2 has 50,257 tokens.

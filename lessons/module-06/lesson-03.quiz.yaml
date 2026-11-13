@@ -15,16 +15,17 @@
 - id: q2
   question: >-
     Your first Muon run's loss falls normally for 150 steps, then stalls and slowly rises while the
-    AdamW control keeps improving. Its config shows `weight_decay: 0.1`. What is happening?
+    AdamW control keeps improving. Its config shows `muon_weight_decay: 0.1`. What is happening?
   options:
     - Muon needs a longer warmup than AdamW, so the run should be restarted with 2× warmup.
     - The Newton–Schulz step is unstable in bf16, so the run should switch to fp32 for Muon.
     - The run hit a bad data shard, so it should be resumed from the step-100 checkpoint.
-    - Decay scales with Muon's LR of 0.02 and shrinks the blocks; use weight_decay 0.0.
+    - Decay scales with Muon's LR of 0.02 and shrinks the blocks; use muon_weight_decay 0.0.
   correct: 3
   explanation: >-
     In this implementation decay is lr × wd per step, so 0.02 × 0.1 removes 0.2% of every block weight
-    each step, about 30× AdamW's rate. The project's Muon recipe uses weight_decay 0.0.
+    each step, about 33× AdamW's rate. The project's Muon recipe uses muon_weight_decay 0.0 (AdamW keeps
+    its own weight_decay 0.1).
 - id: q3
   question: >-
     At step 1,200 your WSD run is 0.04 bpb behind the cosine control; at step 1,907 it is 0.002 ahead,

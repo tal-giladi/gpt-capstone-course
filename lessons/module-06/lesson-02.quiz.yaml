@@ -13,8 +13,9 @@
     evidence for choosing a bundle that contains it, not a final architecture on its own.
 - id: q2
   question: >-
-    `abl_untied` is 0.006 bpb better than the control (threshold 0.004), and its log shows MFU 20% higher
-    than the control at the same tokens/s. How do you read this?
+    `abl_untied` is 0.006 bpb better than the control (threshold 0.004) at the same tokens/s, but it has
+    25M more parameters. A teammate's script computes its MFU as 6 × all parameters and reports it 20%
+    above the control. How do you read this?
   options:
     - The run is genuinely faster, so untying should be adopted for speed as well as loss.
     - The higher MFU means the untied model used the GPU better, so the loss gain is partly a speed effect.
@@ -22,8 +23,8 @@
     - The MFU difference shows a measurement error, so the whole run should be discarded and repeated.
   correct: 2
   explanation: >-
-    The untied run has 25M more parameters but no extra matmul, so the 6N-based MFU overstates it; compare
-    tokens/s. The loss gain is real at matched tokens but costs parameters, about +10% at 350M.
+    The untied run has 25M more parameters but no extra matmul, so 6 × all parameters overstates its MFU
+    (mygpt's logged MFU leaves the input table out for this reason); compare tokens/s. The loss gain is real at matched tokens but costs parameters, about +10% at 350M.
 - id: q3
   question: >-
     Both bundles beat the control beyond the threshold; `abl_qwen3` and `abl_llama` are 0.001 bpb apart,

@@ -153,7 +153,7 @@ rclone copy r2:mygpt/tok/gpt2-10BT/ data/tok/gpt2-10BT \
 python -c "from mygpt.evaluate import load_hellaswag; print(len(load_hellaswag()), 'HellaSwag examples cached')"
 ```
 
-Expect `10042 HellaSwag examples cached`. Downloading it once **before** `torchrun` stops several GPU processes from writing the same file at the same moment.
+Expect `10042 HellaSwag examples cached`. Downloading it once **before** `torchrun` checks that the box can reach GitHub and caches the file in `~/.cache/mygpt/`. (If it is missing, `mygpt.train` downloads it on rank 0 at startup, to a temporary file that is renamed when complete, while the other ranks wait.)
 
 ### 6. Launch the rehearsal in tmux (10 min)
 
@@ -211,7 +211,7 @@ If you go straight on to 05.2, keep this box: the drill uses the same setup. Oth
 | `CUDA out of memory` at step 1 | Micro-batch 64 does not fit in 24 GB | `train.micro_batch_size=16` (or 8); accumulation keeps the batch |
 | `wandb: ERROR api_key not configured` or no run on wandb.ai | `WANDB_API_KEY` not in the template, or the secret name differs | `echo ${WANDB_API_KEY:0:4}`; fix the template and redeploy, or `export WANDB_API_KEY=...` for this session |
 | `[ckpt] WARNING: ckpt_remote=... set but rclone is not installed` | `setup_box.sh` did not finish | Rerun `bash tools/setup_box.sh`; check `rclone lsf r2:mygpt/` |
-| `FileNotFoundError` or `JSONDecodeError` from HellaSwag | No internet to GitHub, or ranks raced on the download | Run the step 5 pre-download, then relaunch (the run resumes from its checkpoint) |
+| `URLError` or `FileNotFoundError` from HellaSwag | No internet to GitHub from the box | Run the step 5 pre-download (or copy `hellaswag_val.jsonl` into `~/.cache/mygpt/`), then relaunch (the run resumes from its checkpoint if it has one) |
 | `torchrun: command not found` | venv not active in this tmux window | `cd ~/mygpt && . .venv/bin/activate` |
 
 ## Artifact

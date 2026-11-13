@@ -1,6 +1,8 @@
 # Faithful GPT-2 124M on 10B FineWeb-Edu tokens (GPT-2 tokenizer), 8 GPUs.
 #   torchrun --standalone --nproc_per_node=8 -m mygpt.train --config configs/baseline_124m.yaml
-# 10e9 / 524288 = 19073 steps. On 8xH100 expect roughly 1.2-1.5M tok/s -> ~2 h wall clock.
+# 10e9 / 524288 = 19073 steps. On 8xH100 SXM at ~40% MFU (855 MFLOP/token -> ~460k tok/s per GPU)
+# expect ~3.3-3.7M tok/s per node -> ~45-55 min of training (plus evals/checkpoints).
+# (8xA100 is roughly 1.2-1.5M tok/s -> ~2 h.)
 model:
   vocab_size: 50304        # 50257 padded to a multiple of 128
   n_layer: 12

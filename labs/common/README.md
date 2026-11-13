@@ -85,15 +85,24 @@ python scripts/judge_winrate.py --model-a hf/my-gpt-350m-sft --model-b hf/my-gpt
 - Gradient accumulation = `total_batch_tokens / (micro_batch_size * seq_len * world_size)`; DDP
   gradient sync only on the last micro-step (`no_sync`).
 - Auto-resume: newest `out_dir/ckpt_*.pt` (model, optimizers, step, data position, RNG). If
-  `out_dir` is empty and `ckpt_remote` is set, the newest checkpoint is pulled first. A resumed
-  run reproduces the uninterrupted loss curve (tested).
+  `out_dir` is empty and `ckpt_remote` is set, the newest checkpoint (and `log.jsonl`, if
+  `out_dir` has none) is pulled first. A resumed run reproduces the uninterrupted loss curve
+  (tested). Training config may change on resume (e.g. a smaller `train_tokens` branches a WSD
+  decay off a stable checkpoint, tested); the model config may not.
+- `train.skip_batches=N`: on resume, advance the data loader N global batches (optimizer steps'
+  worth of data) and log it, e.g. to step past data that repeatedly produces a NaN. Applied once:
+  resuming again from a checkpoint written with the same N does not skip again.
 - Checkpoints every `ckpt_every` steps and at the end, keep `keep_last`, uploaded in the
-  background with `rclone copy` when `ckpt_remote` is set (e.g. `r2:mygpt/ckpt/baseline_124m`).
+  background with `rclone copy` when `ckpt_remote` is set (e.g. `r2:mygpt/ckpt/baseline_124m`),
+  together with the current `log.jsonl`.
+- Optimizers: `weight_decay` is AdamW's (>=2D tensors only); with `optimizer: muon` the block
+  matrices use `muon_weight_decay` (default 0.0) instead.
 - SIGTERM (preemption, `kill`) -> checkpoint after the current step, exit 0.
 - NaN/inf loss or gradient -> stop with exit code 1 and print the last good checkpoint.
 - `out_dir/log.jsonl`: step, loss, lr, grad_norm, tokens_per_s, mfu, val_loss, val_bpb, hellaswag.
   MFU uses the dense BF16 peak of the detected GPU (H100 SXM 989, H100 NVL 835, H100 PCIe 756,
-  H200 989, B200 2250, A100 312 TFLOP/s).
+  H200 989, B200 2250, A100 312 TFLOP/s). FLOPs/token = 6N + 12·L·d·T, where N excludes lookup
+  tables (wpe, and wte when embeddings are untied).
 - `data_dir: synthetic` generates a learnable toy dataset (used by `smoke_cpu.yaml`).
 
 ## Shards
