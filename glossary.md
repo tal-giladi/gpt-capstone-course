@@ -9,7 +9,9 @@ Terms used across the capstone, in alphabetical order.
 - **Auto-resume** — the trainer's behaviour of continuing from the latest checkpoint in `out_dir` (model, optimizer, step, data position, RNG) instead of starting over.
 - **Backblaze B2** — S3-compatible object storage at $6.95/TB-month with free egress up to 3× stored data (checked 2026-11-13).
 - **Benchmark contamination** — benchmark items (or most of their text) present in the training data, which lets a model recall instead of reason and inflates scores.
+- **Beta (DPO)** — the strength of the pull back towards the reference model; the implicit reward is beta times the log-ratio, so a larger beta keeps the policy closer to the SFT model.
 - **Bits per byte (bpb)** — validation loss converted to bits and divided by bytes of text instead of tokens; comparable across tokenizers, unlike loss per token.
+- **Bootstrap confidence interval** — an interval from re-computing a statistic on many resamples (with replacement) of the prompts; used for the win rate with ties.
 - **Bucket-scoped token** — an access key limited to the objects of one bucket; it cannot list or create buckets.
 - **Budget alert** — an email when spending passes a threshold (for example Cloudflare budget alerts); informational only, it never caps usage.
 - **budget.md** — the learner's budget file at the root of the project repo: the $500 plan, spending rules, kill checklist, accounts/alerts table and the ledger `| date | lesson | item | estimate | actual |`.
@@ -32,6 +34,7 @@ Terms used across the capstone, in alphabetical order.
 - **Decontamination** — removing training documents that overlap evaluation benchmarks (here by `decontam.py` plus `filter_shards.py`) and reporting what was removed.
 - **Dense vs sparse FLOPs** — vendors headline tensor-core throughput "with sparsity" (2:4 structured), twice the dense figure that training actually uses.
 - **Dollars per billion tokens** — price per GPU-hour × 10^9 / (3600 × tokens/s per GPU × scaling efficiency); the number to compare GPUs and providers by.
+- **DPO (Direct Preference Optimization)** — preference tuning without a separate reward model or RL loop: a logistic loss on the difference of the policy-vs-reference log-ratios of the chosen and rejected answers.
 - **Egress** — data transferred out of a provider's network; often billed per GB, free on Cloudflare R2.
 - **encode_special_tokens** — Hugging Face `tokenizers` setting; when true, special-token strings found inside input text are encoded as ordinary text instead of as the special id.
 - **End-of-text token (EOT)** — `<|endoftext|>`, written before every document in the shards and used to end answers in SFT; id 50256 for GPT-2, id 0 for the course tokenizer.
@@ -47,11 +50,14 @@ Terms used across the capstone, in alphabetical order.
 - **HGX** — NVIDIA's 8-GPU baseboard where every GPU is connected to every other through NVLink switches.
 - **Idle guard** — a script that stops a GPU box after its GPUs have been idle for a set number of minutes (`scripts/autoshutdown.sh`).
 - **Idle guard (auto-shutdown)** — a script that polls GPU utilization and stops the machine after N minutes idle.
+- **Implicit reward** — `rewards/chosen` and `rewards/rejected` in TRL logs: beta × (log-prob under the policy − log-prob under the reference) of an answer.
 - **int_score** — FineWeb-Edu column: the classifier's educational score rounded to an integer 0-5; every row in FineWeb-Edu has 3 or more.
 - **Interruptible / spot / preemptible instance** — a discounted GPU the provider can reclaim at any time; only for jobs that checkpoint and resume automatically.
 - **keep_start truncation** — TRL's way of cutting a too-long example: keep the first `max_length` tokens and drop the end, so late turns of long conversations are lost.
 - **Kill checklist** — the steps before leaving any rented machine: results safe, terminate, empty instance list, billing checked, ledger line.
 - **Ledger** — the dated list of every spend in `budget.md`, with the estimate before and the actual cost after each session.
+- **Length bias** — a judge's tendency to prefer longer answers regardless of quality; checked by comparing answer lengths of wins and losses.
+- **LLM-as-a-judge** — using a strong language model to compare or grade answers; cheap and scalable, but biased towards position and length.
 - **LoRA (low-rank adaptation)** — fine-tuning small low-rank adapter matrices next to frozen weights; saves memory for large models, saves little for a 350M model, and produces an adapter rather than a full model.
 - **Loss mask** — the per-token flags (label -100 in Hugging Face) that exclude tokens from the loss while still feeding them to the model.
 - **Manifest** — a file listing every data file with size and sha256 at a pinned revision, used to verify and document what you trained on.
@@ -67,16 +73,23 @@ Terms used across the capstone, in alphabetical order.
 - **Object storage** — storage for whole files ("objects") in buckets, accessed over HTTP with an API such as S3, rather than as a mounted disk.
 - **ODC-By** — Open Data Commons Attribution License 1.0: any use of a database, including commercial, as long as you attribute it when you share it or a derived database.
 - **On-demand instance** — a GPU you keep until you release it, at a fixed hourly price.
+- **Over-optimization** — DPO driving down the likelihood of even the chosen answers while train accuracy approaches 1; answers become long, repetitive or odd.
 - **Over-training** — training a fixed-size model on more tokens than compute-optimal, trading training compute for a better small model that is cheaper to use.
 - **Packing** — concatenating several short examples into one fixed-length row to avoid padding; in TRL 1.17 the default best-fit-decreasing packing needs padding-free FlashAttention to keep examples from attending to each other.
+- **Pairwise win rate** — the share of prompts where model B's answer is judged better than model A's, with ties usually counted as half.
 - **Parquet** — columnar, compressed file format used by Hugging Face datasets; FineWeb-Edu ships ~2.15 GB parquet files.
 - **Planning rate** — the assumed price per GPU-hour used before real prices and throughput are measured; $4.00 in this course until lesson 04.3.
 - **Pod template** — a saved RunPod launch configuration: image, disks, ports and environment variables (including secret references).
+- **Position bias** — a judge's tendency to prefer the answer shown first (or second); cancelled by judging every pair in both orders.
+- **Preference pair** — two answers to the same prompt, one labelled `chosen` (better) and one `rejected`; the training unit of DPO and reward models.
 - **Prepaid credit** — a balance loaded in advance (RunPod, Vast.ai, LLM APIs); with automatic top-up off, an empty balance stops spending.
 - **Push protection** — GitHub secret scanning that blocks pushes containing known secret formats; on by default for users' pushes to public repositories.
 - **QK-norm** — normalising queries and keys per head before the attention dot product; widens the range of stable learning rates (used in Qwen3).
 - **rclone** — command-line tool that copies, checks and syncs files between local disks and dozens of storage backends.
 - **rclone copy vs sync** — `copy` only adds and updates files at the destination; `sync` also deletes destination files that are missing at the source.
+- **Reference model** — a frozen copy of the starting (SFT) model whose log-probabilities anchor DPO; TRL loads it automatically in the policy's dtype.
+- **Regression check** — re-running the pretraining benchmarks with identical settings after post-training to make sure base skills were not lost.
+- **Reward accuracy / margin** — the share of pairs where the chosen answer has the higher implicit reward, and the average reward difference; useful for health checks, not for choosing the better chat model.
 - **RMSNorm** — normalisation that divides by the root mean square of the activations with a learned scale, without LayerNorm's mean subtraction and bias.
 - **RoPE (rotary position embedding)** — encodes position by rotating query and key vectors by position-dependent angles inside attention, replacing a learned position table.
 - **RunPod secret** — a value stored in RunPod and substituted into a pod's environment at boot via `{{ RUNPOD_SECRET_name }}`; never shown again after creation.
@@ -102,9 +115,11 @@ Terms used across the capstone, in alphabetical order.
 - **torchrun** — PyTorch's launcher that starts one training process per GPU and sets RANK, LOCAL_RANK and WORLD_SIZE; `--standalone` runs everything on one node.
 - **Two-factor authentication (2FA)** — a second login factor such as an authenticator-app code, required here on every account that can spend money or hold secrets.
 - **uint16** — 16-bit unsigned integer (0–65,535); stores token ids in 2 bytes, which limits the vocabulary to 65,536.
+- **UltraFeedback (binarized)** — ~64k prompts with four model answers scored by GPT-4; the binarized version takes the best as chosen and a random other as rejected (MIT).
 - **uv** — Astral's fast Python package and project manager; creates the virtualenv, installs Python itself and selects PyTorch wheels with `--torch-backend`.
 - **Validation split** — the first ~50M tokens (whole documents) of each shard set's input, written to `val_*.bin` and never trained on.
 - **Vocabulary size** — number of distinct token ids; it sets the embedding and output-layer size (V × d parameters, about 6·V·d training FLOPs per token for the output layer).
+- **Wilson interval** — a binomial confidence interval that behaves well for small samples and rates near 0 or 1; used for the win share among decided prompts.
 - **WSD schedule (warmup-stable-decay)** — linear warmup, a long constant-LR phase, then a short decay (here the last 20% of steps); ends about level with cosine and lets the run length be chosen late.
 - **Xet** — Hugging Face's chunk-deduplicating storage and transfer backend; `hf_xet` is the default download client since huggingface_hub 1.0 (`HF_XET_HIGH_PERFORMANCE=1` to go faster).
 - **Xid error** — an NVIDIA driver error code in the kernel log (`dmesg`) that signals a GPU hardware or driver fault.

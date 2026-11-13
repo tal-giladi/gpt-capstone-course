@@ -1,0 +1,124 @@
+- id: q1
+  question: >-
+    You plan to publish your chat model commercially-friendly on the Hub. A teammate proposes mixing
+    in the Tulu 3 SFT mixture "for more data". What is the main problem to check first?
+  options:
+    - Its rows use a `conversations` column that `sft.py` cannot read without conversion.
+    - It is too small to make a difference next to the 460k conversations of smol-smoltalk.
+    - It cannot be downloaded without first requesting access from AllenAI on the Hub.
+    - Some subsets carry other licenses, including a non-commercial one (No Robots).
+  correct: 3
+  explanation: >-
+    The mixture is ODC-BY overall, but individual subsets keep their own terms, and No Robots is
+    CC-BY-NC-4.0. It already uses `messages`, is public and has 939k rows.
+- id: q2
+  question: >-
+    Your base model was pretrained with `block_size: 1024`. In `sft_data_stats.py`, 43% of
+    conversations exceed 1,024 tokens. Which setting is right for the SFT run?
+  options:
+    - "`--max-length 1024`, accepting that late turns of long chats are cut off."
+    - "`--max-length 4096`, so that no conversation is truncated during training."
+    - "`--max-length 512`, so that batches are shorter and the run costs half as much."
+    - "`--max-length 2048`, since doubling the context is safe for any RoPE model."
+  correct: 0
+  explanation: >-
+    The model has never seen positions beyond 1,024, so the SFT length is capped there; TRL keeps the
+    start of each conversation. 512 would truncate most answers, and longer limits ask the model to
+    work at positions it was never trained on.
+- id: q3
+  question: >-
+    You print the assistant mask for one rendered conversation and see `<|user|>` tags and user text
+    bracketed as trained tokens, alongside the answers. What will happen if you train like this?
+  options:
+    - The model stops more reliably, because the role tags are trained as stop signals.
+    - The model also learns to write user turns, wasting gradient on text you never want.
+    - Nothing changes, because TRL ignores the mask when the dataset has a `messages` column.
+    - Training fails at once, because TRL refuses masks that include non-assistant tokens.
+  correct: 1
+  explanation: >-
+    That mask means the loss covers the whole conversation, as with `--assistant-only-loss false`.
+    The model then learns to continue with the user's side too, and about a quarter of the
+    gradient is spent on text it should never generate.
+- id: q4
+  question: >-
+    Your exported tokenizer has no `<|user|>` or `<|assistant|>` special tokens. Why is that fine for
+    SFT on your own 32k BPE model?
+  options:
+    - TRL adds the missing special tokens and resizes the embeddings automatically.
+    - The tags are only used at inference by `chat.py` and never appear in training data.
+    - The tags are plain text learned in SFT; only EOT has to be a real special token.
+    - The tags are mapped onto unused byte tokens in the vocabulary during the export step.
+  correct: 2
+  explanation: >-
+    The template writes the tags as ordinary text, so they cost a few normal tokens and the embedding
+    matrix never changes. What must be a single special id is `<|endoftext|>`, which ends every
+    answer and stops generation.
+- id: q5
+  question: >-
+    A DPO run with the learning rate 5e-7 shows rewards and logps hardly moving after 1,000 steps. The
+    script loaded the model in bf16 and trained with `bf16=True`. What is the likely cause?
+  options:
+    - Updates far below bf16 resolution are rounded away, as no fp32 copy exists.
+    - The reference model in bf16 cancels the policy update on every step of the run.
+    - Learning rates below 1e-6 are clipped to zero by the AdamW implementation in PyTorch.
+    - The beta parameter was too high, which freezes the policy at the reference model.
+  correct: 0
+  explanation: >-
+    With weights stored in bf16 and no master copy, a step of 5e-7 on weights around 0.02 changes only
+    about 1% of them. Loading fp32 weights and training with bf16 autocast fixes it; a high beta
+    slows divergence but does not stop the log-probabilities from moving.
+- id: q6
+  question: >-
+    After 10 minutes, `num_tokens` has grown by 30M. Your model has 337M parameters and the H100's
+    dense bf16 peak is 989 TFLOP/s. About what MFU does the SFT run reach?
+  options:
+    - About 5%, which means the host is broken and should be released right away.
+    - About 10%, low but not unusual for padded, un-compiled HF training.
+    - About 30%, which is excellent for a Hugging Face Trainer on padded batches.
+    - About 50%, the same as your compiled pretraining run on the same model.
+  correct: 1
+  explanation: >-
+    30M tokens in 600 s is 50k tokens/s; 6 × 337M × 50k ≈ 1.0e17 FLOP/s, about 10% of 989 TFLOP/s.
+    That is on the low side, so check GPU utilization and gradient checkpointing, but it does not
+    by itself mean the host is faulty.
+- id: q7
+  question: >-
+    Midway through epoch 2 the train loss drops by a visible step while eval loss starts creeping up.
+    What does this tell you, and what is a sensible response?
+  options:
+    - The run has diverged, so restart it from scratch with a learning rate ten times lower.
+    - The eval split is contaminated with training data, so switch to a fresh eval set.
+    - The schedule is broken, because cosine decay should keep the train loss perfectly smooth.
+    - The model is memorizing seen conversations; compare a 1-epoch run before shipping.
+  correct: 3
+  explanation: >-
+    Seeing the same conversations again lowers train loss, and rising eval loss means it is starting to
+    fit them rather than the task. A 1-epoch run costs half as much and settles whether the second
+    epoch helps answers at all.
+- id: q8
+  question: >-
+    Your SFT model answers "The capital of Australia is Sydney" with confidence. What is the honest
+    conclusion for a 350M model pretrained on 20B tokens?
+  options:
+    - SFT failed, so the full run must be repeated with twice as many epochs of the same data.
+    - The chat template is wrong, because facts are learned during SFT from the answers.
+    - A knowledge limit of the base model that SFT cannot fix; document it.
+    - The decoding was greedy, so sampling with a higher temperature will produce the right city.
+  correct: 2
+  explanation: >-
+    Facts come from pretraining; SFT teaches format and behaviour. A small model trained on 200× fewer
+    tokens than SmolLM2-360M will often be wrong on facts, which belongs in your model card, not in
+    more epochs.
+- id: q9
+  question: >-
+    You finished SFT on a RunPod pod and want to come back tomorrow for DPO. Which sequence protects
+    both your money and your model?
+  options:
+    - Stop the pod tonight and keep the model on its container disk until tomorrow.
+    - Push `hf/my-gpt-350m-sft` to the bucket, check it is there, then terminate the pod.
+    - Keep the pod running overnight with the idle guard armed so the model stays on disk.
+    - Download the model to your laptop over SSH, then leave the stopped pod in place.
+  correct: 1
+  explanation: >-
+    A stopped pod's container disk is erased, and a running pod bills all night. The bucket copy under
+    `hf/` is the durable one, and tomorrow's pod pulls it in a minute.

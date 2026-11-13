@@ -1,0 +1,15 @@
+- **Preference pair** — two answers to the same prompt, one labelled `chosen` (better) and one `rejected`; the training unit of DPO and reward models.
+- **DPO (Direct Preference Optimization)** — preference tuning without a separate reward model or RL loop: a logistic loss on the difference of the policy-vs-reference log-ratios of the chosen and rejected answers.
+- **Reference model** — a frozen copy of the starting (SFT) model whose log-probabilities anchor DPO; TRL loads it automatically in the policy's dtype.
+- **Beta (DPO)** — the strength of the pull back towards the reference model; the implicit reward is beta times the log-ratio, so a larger beta keeps the policy closer to the SFT model.
+- **Implicit reward** — `rewards/chosen` and `rewards/rejected` in TRL logs: beta × (log-prob under the policy − log-prob under the reference) of an answer.
+- **Reward accuracy / margin** — the share of pairs where the chosen answer has the higher implicit reward, and the average reward difference; useful for health checks, not for choosing the better chat model.
+- **Over-optimization** — DPO driving down the likelihood of even the chosen answers while train accuracy approaches 1; answers become long, repetitive or odd.
+- **UltraFeedback (binarized)** — ~64k prompts with four model answers scored by GPT-4; the binarized version takes the best as chosen and a random other as rejected (MIT).
+- **LLM-as-a-judge** — using a strong language model to compare or grade answers; cheap and scalable, but biased towards position and length.
+- **Pairwise win rate** — the share of prompts where model B's answer is judged better than model A's, with ties usually counted as half.
+- **Position bias** — a judge's tendency to prefer the answer shown first (or second); cancelled by judging every pair in both orders.
+- **Length bias** — a judge's tendency to prefer longer answers regardless of quality; checked by comparing answer lengths of wins and losses.
+- **Bootstrap confidence interval** — an interval from re-computing a statistic on many resamples (with replacement) of the prompts; used for the win rate with ties.
+- **Wilson interval** — a binomial confidence interval that behaves well for small samples and rates near 0 or 1; used for the win share among decided prompts.
+- **Regression check** — re-running the pretraining benchmarks with identical settings after post-training to make sure base skills were not lost.

@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your evaluation report will include TruthfulQA, and UltraFeedback reused some TruthfulQA prompts.
+    Which preference data fits best, and what extra step does it need with `dpo.py`?
+  options:
+    - trl-lib/ultrafeedback_binarized as is, since the TRL copy has already removed those prompts.
+    - The Tulu 3 8B preference mixture, since 273k pairs dilute any contaminated prompts.
+    - Argilla's cleaned UltraFeedback, converted to a JSONL with only `chosen` and `rejected`.
+    - HuggingFaceH4/ultrafeedback_binarized, loaded with `--split train_prefs` and nothing else.
+  correct: 2
+  explanation: >-
+    The Argilla version drops TruthfulQA prompts and binarizes by average rating, but its string
+    `prompt` column next to message lists makes `dpo.py` fail, so you keep only the two message
+    columns. Diluting contamination does not remove it, and the H4 copy has the same column issue.
+- id: q2
+  question: >-
+    In the 20-step smoke test the loss stays at 0.6931 and every reward is exactly 0 through step 20,
+    although `learning_rate` is non-zero after warmup. What do you check first?
+  options:
+    - Whether `dpo.py` loads fp32 weights, since bf16-stored weights swallow tiny updates.
+    - Whether beta is too high, since beta 0.5 forbids any change from the reference model.
+    - Whether the dataset is too small, since 2,000 pairs cannot produce a gradient signal.
+    - Whether the reference model failed to load, since then all rewards default to zero.
+  correct: 0
+  explanation: >-
+    At 1e-6 almost no bf16 weight changes per step, so policy and reference stay identical and the
+    loss stays at ln 2. Beta scales the reward but does not freeze it at zero, and a missing
+    reference model would raise an error, not silently log zeros.
+- id: q3
+  question: >-
+    Run A ends with train `rewards/accuracies` 0.97, eval 0.58, `eval_logps/chosen` down from -250 to
+    -600, and probe answers that are long and repetitive. What do you conclude?
+  options:
+    - Run A is the stronger model, since its training accuracy is far higher than run B's.
+    - The eval set is too small, so the 0.58 should be ignored in favour of the train value.
+    - The SFT model was weak, so DPO should be repeated for a third epoch at the same settings.
+    - It over-optimized, losing likelihood on good answers too; the judge decides between runs.
+  correct: 3
+  explanation: >-
+    Near-perfect train accuracy with little eval gain, a collapsing chosen log-probability and degraded
+    answers are the classic over-optimization pattern. More epochs make it worse; the judge in 10.2
+    decides between the runs.
+- id: q4
+  question: >-
+    A forum post says to always set `precompute_ref_log_probs=True` for DPO to save memory. For your
+    337M model on an 80 GB H100, what is the right call?
+  options:
+    - Turn it on, because the reference model otherwise doubles the training memory.
+    - Leave it off, because the fp32 reference is about 1.35 GB and memory is not tight.
+    - Turn it on, because without it the reference model is updated along with the policy.
+    - Leave it off, because precomputing is only supported together with LoRA adapters.
+  correct: 1
+  explanation: >-
+    The reference is a frozen forward-only copy of 1.35 GB; the optimizer state of the policy alone is
+    four times that. Precomputing pays off for multi-billion-parameter models, and it has nothing to
+    do with whether the reference is frozen.

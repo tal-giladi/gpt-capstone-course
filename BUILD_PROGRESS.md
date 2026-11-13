@@ -22,14 +22,14 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Module 6 — Make it yours: ablations
 - [ ] Module 7 — The main run
 - [ ] Module 8 — Evaluate honestly
-- [ ] Module 9 — Instruction tuning (SFT)
-- [ ] Module 10 — Preference tuning (DPO)
+- [x] Module 9 — Instruction tuning (SFT)
+- [x] Module 10 — Preference tuning (DPO)
 - [ ] Module 11 — Ship it
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
 - Agent G: Module 7, then Module 8
-- Agent E: Module 9, then Module 10
+- Agent H: labs/common fixes from code-requests 09 and 10
 
 ## Decisions
 - Modules numbered 1–11 (plan's 0–10 shifted by one).

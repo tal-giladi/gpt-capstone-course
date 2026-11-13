@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    A teammate judged 200 prompts once each, always showing the DPO answer first, and reports a 64%
+    DPO win rate. What is the main problem with that number?
+  options:
+    - Too few prompts; with 1,000 prompts the same single-order setup would be fully reliable.
+    - The judge may favour one slot; without swapping orders, that bias is in the 64%.
+    - The judge saw the answers in a fixed order, which makes ties impossible to record.
+    - The result is fine, because modern judges are instructed to ignore answer order.
+  correct: 1
+  explanation: >-
+    LLM judges often prefer the first or second position. Judging each prompt in both orders and
+    counting a win only when both agree cancels that bias; more prompts only make a biased number
+    more precise.
+- id: q2
+  question: >-
+    The final judge gives your DPO model a 54% win rate over SFT on 200 prompts, with a 95% bootstrap
+    CI of 47%–61%. What goes in your results note?
+  options:
+    - DPO improves the model by 4 points, since the point estimate is clearly above 50%.
+    - DPO made the model worse, since the lower end of the interval is below 50%.
+    - No detectable difference; resolving ~5 points would need about 400 prompts.
+    - Nothing yet; rerun the judge until the interval finally stops containing 50%.
+  correct: 2
+  explanation: >-
+    An interval that contains 50% means the data cannot tell the models apart at this sample size.
+    Rerunning until it looks significant is p-hacking; the honest options are to report it or to
+    collect more prompts before looking again.
+- id: q3
+  question: >-
+    You must choose between two DPO variants and then report one number in your model card, on a $10
+    API limit. Which judge plan fits?
+  options:
+    - Claude Haiku 5.5 to pick the variant, then Claude Opus 5.5 for the reported comparison.
+    - Claude Opus 5.5 for both variants, since the cheap judge's verdicts cannot be trusted at all.
+    - Claude Haiku 5.5 for everything, since the cheapest judge is accurate enough to publish.
+    - No judge at all; pick the variant with the higher DPO eval reward accuracy instead.
+  correct: 0
+  explanation: >-
+    Selection with a cents-cheap judge and a single strong-judge measurement costs about $4 in total.
+    Opus for everything also fits but doubles the cost; reward accuracy measures fit to the preference
+    pairs, not answer quality.
+- id: q4
+  question: >-
+    DPO wins 61% (CI 55%–67%), but its answers average 210 words against SFT's 120, and 80% of its wins
+    are prompts where it was longer. What do you do before claiming the improvement?
+  options:
+    - Nothing; the judge prompt says to ignore length, so length cannot explain the wins.
+    - Retrain DPO with a higher beta until both models write answers of the same length.
+    - Switch to the cheapest judge, since small judges are less sensitive to answer length.
+    - Read a sample of those wins and report the length difference next to the win rate.
+  correct: 3
+  explanation: >-
+    Judges tend to reward longer answers even when told not to, and DPO on UltraFeedback pushes toward
+    length. Checking real wins and publishing the length numbers lets readers weigh the result; an
+    instruction in the prompt reduces the bias but does not remove it.

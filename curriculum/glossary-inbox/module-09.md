@@ -1,0 +1,11 @@
+- **SFT (supervised fine-tuning)** — training a pretrained model on example conversations with the ordinary next-token loss, so it learns to answer in a chat format and stop; it teaches behaviour and format, not new knowledge.
+- **Chat template** — the Jinja template stored with the tokenizer that turns a list of messages into one training or prompt string; this course's template uses plain-text `<|user|>` / `<|assistant|>` tags and ends each answer with `<|endoftext|>`.
+- **Generation prompt** — the text appended after the last user turn at inference (`<|assistant|>\n`) so the model continues with an answer.
+- **Assistant-only loss** — computing the SFT loss only on assistant tokens (and the end-of-turn token), marked by `{% generation %}` in the chat template; user and system text are context only.
+- **Loss mask** — the per-token flags (label -100 in Hugging Face) that exclude tokens from the loss while still feeding them to the model.
+- **keep_start truncation** — TRL's way of cutting a too-long example: keep the first `max_length` tokens and drop the end, so late turns of long conversations are lost.
+- **Packing** — concatenating several short examples into one fixed-length row to avoid padding; in TRL 1.17 the default best-fit-decreasing packing needs padding-free FlashAttention to keep examples from attending to each other.
+- **LoRA (low-rank adaptation)** — fine-tuning small low-rank adapter matrices next to frozen weights; saves memory for large models, saves little for a 350M model, and produces an adapter rather than a full model.
+- **Mixed precision with fp32 master weights** — keeping weights and optimizer state in fp32 while running matmuls in bf16 autocast; without the fp32 copy, small updates are rounded away by bf16's ~3 significant digits.
+- **Mean token accuracy** — TRL's logged share of trained tokens where the model's top-1 prediction equals the target token.
+- **smol-smoltalk** — Hugging Face's Apache-2.0 SFT dataset for models under 1B parameters (460k train conversations), the SFT data of SmolLM2-360M-Instruct.

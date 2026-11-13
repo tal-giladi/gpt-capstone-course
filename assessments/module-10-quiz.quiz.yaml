@@ -1,0 +1,119 @@
+- id: q1
+  question: >-
+    `dpo.py` crashes on `HuggingFaceH4/ultrafeedback_binarized` with "'list' object has no attribute
+    'endswith'". The rows have a string `prompt` and message lists `chosen`/`rejected`. What fixes it?
+  options:
+    - Switching the run to `--max-length 2048` so the longer prompts fit inside the context.
+    - Passing `--split train_prefs` so that TRL picks the preference-formatted version of the data.
+    - A JSONL with only `chosen` and `rejected`, whose lists already hold the user turn.
+    - Replacing every `chosen` list by its last message so that all three columns are plain strings.
+  correct: 2
+  explanation: >-
+    TRL cannot mix a string prompt with conversational answers. The message lists already contain the
+    user turn, so dropping `prompt` gives the implicit-prompt format `dpo.py` handles; flattening to
+    strings would lose the chat template.
+- id: q2
+  question: >-
+    The first logged DPO step shows `loss` 0.6931 and all `rewards/*` at 0. A colleague thinks the run
+    is broken. What do you tell them?
+  options:
+    - It is expected, because at step 0 the policy equals the reference and the loss is ln 2.
+    - It is broken, because a correct DPO run starts with positive margins from the SFT model.
+    - It is broken, because the reference model must be loaded in a different dtype than the policy.
+    - It is expected only when beta is 0.1; with beta 0.5 the first loss is about 0.35.
+  correct: 0
+  explanation: >-
+    Both log-ratios are zero when the policy is the reference, so the sigmoid argument is 0 and the
+    loss is −log(0.5) = 0.693 regardless of beta. The question is whether rewards move after warmup.
+- id: q3
+  question: >-
+    You raise beta from 0.1 to 0.5 at the same learning rate. What do you expect to change?
+  options:
+    - The model drifts further from the SFT model, because larger beta amplifies the rewards.
+    - It stays closer to the SFT model, as the same reward needs less log-prob change.
+    - Nothing in training, because beta only rescales the logged rewards and not the gradient.
+    - The reference model is updated more often, because beta sets the reference sync interval.
+  correct: 1
+  explanation: >-
+    The implicit reward is beta times the log-ratio, so with a larger beta the loss is satisfied by a
+    smaller change in log-probabilities: the penalty for drifting is stronger. Reference syncing is a
+    separate option (`sync_ref_model`).
+- id: q4
+  question: >-
+    Run A's train `rewards/accuracies` reaches 0.96 while eval stays at 0.57, `logps/chosen` has more
+    than doubled in magnitude, and answers ramble. Run B looks modest. Which do you take to the judge?
+  options:
+    - Only run A, because its training metrics show it learned the preference pairs much better.
+    - Neither; DPO failed, so the SFT model is the one to publish in Module 11.
+    - Only run B, because training metrics are the deciding evidence and B is the safer one.
+    - Both, and expect B to do better, since A shows signs of over-optimization.
+  correct: 3
+  explanation: >-
+    Training metrics cannot pick the better chat model, but A shows the over-optimization pattern, so
+    you judge both and let the judge decide. Dropping DPO before measuring it would waste the run.
+- id: q5
+  question: >-
+    You have 200 prompts, both answer sets already generated on the pod, and the pod costs $2.69/h. The
+    judge run will take about 25 minutes of API calls. Where do you run the judging?
+  options:
+    - On the pod, so that answers and judgments stay together on one disk for later.
+    - On your laptop from the answer files, after pushing them and terminating the pod.
+    - On the pod, but with the idle guard disabled so the long API wait does not stop it.
+    - On a second, cheaper CPU pod, so the GPU pod can keep running for later tasks.
+  correct: 1
+  explanation: >-
+    Judging needs no GPU, only the API key and the answers. Running it from the laptop keeps the key off
+    a rented machine and stops GPU billing; `--answers-a/--answers-b` exist for exactly this.
+- id: q6
+  question: >-
+    `judge_tools.py report` shows the judge picks the first-shown answer 71% of the time, and 40% of
+    prompts are ties. How do you read that?
+  options:
+    - The judge is broken and its result must be discarded entirely.
+    - The models are identical, because ties mean both answers were the same text.
+    - Strong position bias, which the order swap turned into ties instead of fake wins.
+    - The win rate is inflated by 21 points and should be corrected downward by that amount.
+  correct: 2
+  explanation: >-
+    A judge that leans toward the first slot flips its verdict when the order flips; counting those as
+    ties is how the swap protects the win rate. Report the bias; a different judge can serve as a
+    second opinion.
+- id: q7
+  question: >-
+    Opus 5.5 at $4/$20 per million tokens is the default judge. Your estimate for 200 prompts is about
+    270k input and 145k output tokens. Roughly what will the run cost at standard prices?
+  options:
+    - About $0.40, since the judge only writes a short verdict for each prompt.
+    - About $1.10, since input tokens dominate a pairwise judging workload.
+    - About $8, since every prompt is judged twice and each call costs about $0.02.
+    - About $4, since 0.27M × $4 plus 0.145M × $20 is roughly $1.10 + $2.90.
+  correct: 3
+  explanation: >-
+    Output tokens, including hidden reasoning, cost five times as much as input, so they dominate:
+    $1.08 + $2.90 ≈ $4. The two orders are already in the token counts.
+- id: q8
+  question: >-
+    `eval_delta.py` shows HellaSwag acc_norm 0.452 for base and 0.446 for DPO, each with standard error
+    0.005. What is the right conclusion?
+  options:
+    - No meaningful regression; a 0.6-point drop is within two combined errors.
+    - A clear regression; any drop on HellaSwag means DPO damaged pretraining knowledge.
+    - An improvement, because lower HellaSwag shows the model stopped copying web text.
+    - Undecidable; HellaSwag cannot be compared across base and aligned models at all.
+  correct: 0
+  explanation: >-
+    The combined standard error is about 0.007, so −0.006 is under one SE. With the same scoring
+    protocol for all models, HellaSwag is a fair check of retained skills.
+- id: q9
+  question: >-
+    Your judge result is 52% (CI 45%–59%) and regression is clean. Which model do you ship in Module 11,
+    and how do you describe it?
+  options:
+    - The DPO model, described as "preferred by Claude over SFT", since 52% is above 50%.
+    - The SFT model, since DPO that does not win significantly must have damaged the model.
+    - Either, reported as no detectable difference with the CI and judge stated.
+    - Neither; repeat DPO with new settings until the judge shows a significant win.
+  correct: 2
+  explanation: >-
+    With no detectable difference and no regression, both are defensible; what matters is reporting the
+    number honestly with its interval. Retrying until significance is selection on noise.

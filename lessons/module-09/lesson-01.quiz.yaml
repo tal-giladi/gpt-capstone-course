@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    You want to publish your 350M chat model on the Hub under a permissive license. Which SFT
+    dataset fits your model and that goal best?
+  options:
+    - The Tulu 3 SFT mixture, because its 939k rows give more variety than any other option.
+    - SmolTalk2's SFT subset, because its reasoning traces teach the model to think step by step.
+    - smol-smoltalk, because it was built for sub-1B models and is Apache-2.0 licensed.
+    - OpenHermes-2.5, because GPT-4 answers are the highest-quality targets available.
+  correct: 2
+  explanation: >-
+    smol-smoltalk is the SFT data of SmolLM2-360M-Instruct and uses Apache-2.0. Tulu 3 has a
+    non-commercial subset and targets 8B, SmolTalk2 is long reasoning data for a 3B model, and
+    OpenHermes-2.5 has no stated license.
+- id: q2
+  question: >-
+    Your model's context is 1,024 tokens and `sft_data_stats.py` reports 43% of conversations are
+    longer than that. What do you do?
+  options:
+    - Train at 1,024 and accept it, since TRL keeps the first turns of each conversation.
+    - Drop every conversation longer than 1,024 tokens so the model only sees whole examples.
+    - Set `--max-length 2048`, since RoPE models extrapolate to twice their training context.
+    - Switch to `--packing`, because packing splits long conversations across several rows.
+  correct: 0
+  explanation: >-
+    `keep_start` truncation keeps the complete first exchanges, which is still useful training data;
+    dropping long conversations throws away 43% of the data and biases the model toward short answers.
+    Training past the pretraining context is not something to try in a production run.
+- id: q3
+  question: >-
+    In the assistant-mask printout of your chat template, the answer text is bracketed but
+    `<|endoftext|>` after it is not. What will the SFT model most likely do?
+  options:
+    - Answer correctly but repeat the user's question first, because user tokens are trained.
+    - Nothing different, since `chat.py` cuts generation at the role tag anyway.
+    - Fail to load in `chat.py`, because the tokenizer and template disagree.
+    - Keep generating after its answer, because it was never trained to emit the stop token.
+  correct: 3
+  explanation: >-
+    The model learns to stop only if the end-of-turn token is in the loss. `chat.py` stops on EOT,
+    not on role tags, so an untrained EOT gives rambling answers that run into the token limit.
+- id: q4
+  question: >-
+    The stats script estimates 1.9 GPU-hours for 2 epochs at an assumed 20% MFU. What is the
+    most useful thing to do with that number before 09.2?
+  options:
+    - Rent an 8×H100 node instead so the whole job finishes in about 15 minutes of wall clock.
+    - Log it in `budget.md`, then swap the assumed MFU for the one you measure early in 09.2.
+    - Cut it by a quarter, because SFT only computes the loss on 75% of the tokens.
+    - Ignore it, because SFT is far too small to matter next to the pretraining budget.
+  correct: 1
+  explanation: >-
+    The MFU is an assumption; the first logged steps give real tokens per second, which turn the
+    estimate into a measured one. Masked tokens still go through forward and backward, so the loss
+    mask does not cut compute, and an 8× node is not worth its setup time for a 2-hour job.

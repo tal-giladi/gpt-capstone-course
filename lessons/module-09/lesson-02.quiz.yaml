@@ -1,0 +1,54 @@
+- id: q1
+  question: >-
+    A friend suggests `--lora` for your 350M SFT run on one 80 GB H100 "because it is the modern
+    way". What is the better call for this project?
+  options:
+    - LoRA, because full fine-tuning a 350M model needs more than 80 GB of GPU memory.
+    - Full fine-tune, because memory is no issue and LoRA leaves only an adapter to carry forward.
+    - LoRA, because it trains on fewer tokens per step and therefore finishes several times faster.
+    - Full fine-tune, but only after converting the model to bf16 weights to halve the memory.
+  correct: 1
+  explanation: >-
+    Weights, gradients and AdamW state for 337M parameters are about 5.4 GB in fp32, so memory is not
+    a constraint. LoRA would save ~30% compute but leave an adapter folder that DPO, the judge and
+    the Hub upload must handle, and bf16 weights would swallow small updates.
+- id: q2
+  question: >-
+    Your sweep ends with eval loss 2.10 at lr 5e-5, 1.92 at 2e-4 and 1.88 at 1e-3, but the 1e-3 run
+    had two gradient-norm spikes and a loss jump near step 150. Which rate do you use for the full run?
+  options:
+    - 1e-3, because it reached the lowest final eval loss of all three runs.
+    - 5e-5, because the safest rate is always the right choice for any long run.
+    - A new value of 5e-3, because the trend says higher rates keep improving.
+    - 2e-4, because it is nearly as good and was stable through the whole run.
+  correct: 3
+  explanation: >-
+    An unstable short run at 1e-3 is a warning for a run 30 times longer; 2e-4 gives almost the same
+    eval loss without spikes. Extrapolating upward ignores the instability you just saw.
+- id: q3
+  question: >-
+    The SFT loss went down nicely, but in the probe report every SFT answer runs until the token limit
+    and then starts a new `<|user|>` turn. What do you check first?
+  options:
+    - Whether `<|endoftext|>` sits inside the assistant loss mask of your training template.
+    - Whether the learning rate was far too low for the model to learn the answer format at all.
+    - Whether the probe used greedy decoding instead of sampling with a temperature of 0.7.
+    - Whether the dataset revision changed between lesson 09.1 and the day of the training run.
+  correct: 0
+  explanation: >-
+    A model that never learned to emit EOT keeps going and invents the next turn. That happens when the
+    end-of-turn token is outside the trained mask, typically after passing a custom `--chat-template`.
+    A low learning rate would also leave the answers themselves unchanged, which is not what you see.
+- id: q4
+  question: >-
+    Training just printed `saved SFT model to hf/my-gpt-350m-sft` on your RunPod pod, and the idle
+    guard is armed at 20 minutes. What do you do next?
+  options:
+    - Run the probe report first, since it needs the GPU and the guard only stops idle pods.
+    - Terminate the pod at once and re-download the model from the pod's disk later.
+    - Push the model and logs to the bucket, then run the probes and chat checks.
+    - Leave the pod running overnight and read the model's answers in the morning.
+  correct: 2
+  explanation: >-
+    A stopped RunPod pod loses its container disk, and the guard will stop it once the GPU is idle,
+    for example while you read answers. Pushing to `hf/` first makes everything after it safe.
