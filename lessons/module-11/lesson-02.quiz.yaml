@@ -1,0 +1,54 @@
+- id: q1
+  question: >-
+    Your free Hugging Face account is 6 weeks old with a verified email. You want a public chat demo
+    for your 350M model at $0 per month. Which host do you pick?
+  options:
+    - A Gradio Space on CPU Basic, because the 2-vCPU hardware is free for every account.
+    - A Gradio Space on ZeroGPU, which free accounts in good standing may host at no cost.
+    - A Space on a T4 small with a short sleep time, so it only bills while visitors use it.
+    - A Hetzner CPX12 server, since a 1-vCPU VPS is the cheapest always-on option available.
+  correct: 1
+  explanation: >-
+    CPU Basic hardware is free, but creating a Gradio Space now needs a paid plan; ZeroGPU hosting is
+    open to free accounts older than 30 days. A T4 still bills while awake, and a 2 GB VPS cannot hold
+    fp32 weights plus torch.
+- id: q2
+  question: >-
+    `cpu_speed.py` reports 6 tokens/s on 2 laptop threads for your model. A friend wants to host the
+    demo on a 2-vCPU CPU Space. What do you tell them to expect?
+  options:
+    - About 6 tokens/s exactly, since the model and thread count are identical on both machines.
+    - Faster than the laptop, because server CPUs always run matrix code better than laptop chips.
+    - Around 3-6 tokens/s, so a 160-token answer streams for 30-50 s and visitors queue.
+    - Unusable, because a 350M model cannot run on a CPU without first being quantised to int4.
+  correct: 2
+  explanation: >-
+    Two shared cloud vCPUs are usually slower than two laptop performance cores, so the laptop number
+    is an upper bound. Streaming makes 30-50 s answers tolerable for a demo; quantisation would help
+    but is not required.
+- id: q3
+  question: >-
+    Two weeks after launch you push a new, untested DPO model to `main` of your model repo. The next
+    morning the demo answers badly. What setting would have prevented it?
+  options:
+    - Setting `MODEL_REVISION` to the tag `v1.0`, so the Space loads the bytes you evaluated.
+    - Making the model repo gated, so that the Space only downloads approved model versions.
+    - Lowering `MAX_NEW_TOKENS`, so that the new model has less room to produce bad answers.
+    - Pausing the Space every night, so that it re-downloads the model only when you restart it.
+  correct: 0
+  explanation: >-
+    Without a pinned revision the Space follows `main` and picks up whatever you push on its next
+    restart. Pinning a tag decouples the demo from new uploads until you choose to move it.
+- id: q4
+  question: >-
+    A visitor scripts the Space's API endpoint to send hundreds of requests. Which part of `app.py`
+    limits the damage?
+  options:
+    - The disclaimer, because API clients must accept it before their first request is served.
+    - Nothing, because Gradio's API bypasses the chat function and calls the model directly.
+    - The `flagging_mode="never"` setting, which blocks clients that do not use the web page.
+    - The per-client rate limit and length caps, which run inside the chat function.
+  correct: 3
+  explanation: >-
+    The API calls the same `respond` function as the page, so its rate limit, input cap and answer cap
+    apply. The disclaimer is only text, and flagging has nothing to do with access.

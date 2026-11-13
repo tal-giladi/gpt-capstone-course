@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your ablations confirmed that RoPE, SwiGLU and Muon each helped, as their papers reported, and
+    your model beats GPT-2 medium on HellaSwag. A friend suggests putting the report on arXiv. What
+    do you answer?
+  options:
+    - Yes, since any report with original experiments and numbers qualifies for arXiv.
+    - Yes, but only after the Hugging Face article is published and has collected some likes.
+    - Not as is; it confirms known results, so publish it on GitHub and a blog.
+    - No, because arXiv only accepts papers that have already passed formal peer review.
+  correct: 2
+  explanation: >-
+    arXiv moderators expect scholarly, original contributions and may decline course-style projects.
+    arXiv is not peer-reviewed, so that is not the reason; a genuinely new finding written up on its
+    own would be a different case.
+- id: q2
+  question: >-
+    Three weeks after cleanup a $9 charge arrives from RunPod, although the pod list is empty. What
+    is the most likely cause?
+  options:
+    - A network volume or a stopped pod's disk that still holds data and bills per GB-month.
+    - A delayed invoice for the main run, which RunPod always bills a few weeks after use.
+    - The R2 bucket, because RunPod charges a transfer fee whenever pods pull data from it.
+    - The pod template you saved, since templates are billed monthly like any other storage.
+  correct: 0
+  explanation: >-
+    Storage outlives compute: network volumes and stopped pods' volume disks keep billing per
+    GB-month. RunPod bills usage per second from prepaid credit and has no transfer fees; templates
+    are free.
+- id: q3
+  question: >-
+    You are deciding what stays in your R2 bucket. Which keep list costs about $0 per month and still
+    lets you continue training later?
+  options:
+    - Raw FineWeb-Edu parquet only, because everything else can be rebuilt from the raw data.
+    - Every token shard set, because re-tokenizing is the slowest step to repeat later on.
+    - Nothing at all, because the Hugging Face repos already hold everything you might need.
+    - The final checkpoint, logs, tokenizer and manifests, inside the free 10 GB-month.
+  correct: 3
+  explanation: >-
+    The native checkpoint keeps optimizer and data position for continued training, which the HF
+    export does not. Raw data (~93 GB) and shards (~45 GB) cost real money each month and can be
+    rebuilt from the pinned revision.
+- id: q4
+  question: >-
+    Your ledger shows $412 planned and $468 actual. While writing the report you notice that one
+    ablation's bpb improvement is smaller than your measured seed noise. How do you report it?
+  options:
+    - Leave the ablation out, since a weak result makes the whole recipe look less convincing.
+    - Report it with the seed-noise figure and say the effect is not distinguishable from noise.
+    - Rerun that ablation with new seeds until the improvement clears the noise, then report it.
+    - Report the improvement as measured, since the change was kept in the final recipe anyway.
+  correct: 1
+  explanation: >-
+    Readers trust the positive numbers when the negative ones are visible. Rerunning until it looks
+    significant is p-hacking, and dropping it hides why the recipe looks the way it does.

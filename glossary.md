@@ -2,9 +2,13 @@
 
 Terms used across the capstone, in alphabetical order.
 
+- **--limit** — lm-eval option that scores only the first N items of each task; for pipeline tests only, never for reported numbers.
+- **0-shot / few-shot** — evaluating with no solved examples in the prompt, or with k of them; numbers from different shot counts are not comparable.
 - **13-gram overlap** — contamination test used since GPT-3: an item is flagged if any 13-token window of it occurs in the training data.
 - **6ND** — approximate training compute of a dense transformer: 6 FLOPs per parameter per training token (2 forward, 4 backward), plus a few percent for attention.
 - **Ablation** — a training run that changes exactly one setting against a control run, everything else identical, to measure that setting's effect.
+- **acc vs acc_norm** — lm-eval multiple-choice accuracy from the total log-likelihood of each answer, vs from the log-likelihood divided by the answer's length in characters (tokenizer-independent).
+- **Apache-2.0** — a permissive license with an explicit patent grant; the common choice for open small-model weights.
 - **Assistant-only loss** — computing the SFT loss only on assistant tokens (and the end-of-turn token), marked by `{% generation %}` in the chat template; user and system text are context only.
 - **Auto-resume** — the trainer's behaviour of continuing from the latest checkpoint in `out_dir` (model, optimizer, step, data position, RNG) instead of starting over.
 - **Backblaze B2** — S3-compatible object storage at $6.95/TB-month with free egress up to 3× stored data (checked 2026-11-13).
@@ -20,10 +24,13 @@ Terms used across the capstone, in alphabetical order.
 - **Chat template** — the Jinja template stored with the tokenizer that turns a list of messages into one training or prompt string; this course's template uses plain-text `<|user|>` / `<|assistant|>` tags and ends each answer with `<|endoftext|>`.
 - **Checkpoint interval** — how many optimizer steps pass between checkpoints (`ckpt_every`); a failure loses on average half an interval.
 - **Cloudflare R2** — S3-compatible object storage with no egress fees ($0.015/GB-month Standard, checked 2026-11-13).
+- **Cold start** — the delay before a scaled-to-zero or sleeping service answers its first request, spent starting the container and loading the model.
 - **Common Crawl Terms of Use** — terms attached to all Common Crawl-derived corpora, accepted in addition to the dataset's own license.
+- **Common val set** — the held-out documents of this course tokenized by both tokenizers (`tok/common-val-gpt2/`, `tok/common-val-bpe32k/`), so all models are measured on identical text.
 - **Common validation set** — main-run validation documents that do not occur in sample-10BT, tokenized with both tokenizers (`tok/common-val-gpt2/`, `tok/common-val-bpe32k/`) for comparing the baseline and the main model on identical held-out text.
 - **Community cloud / marketplace** — GPUs hosted by smaller third parties (RunPod Community, Vast.ai); cheaper, with more variation in host quality.
 - **Container disk vs volume disk (RunPod)** — container disk is erased when a pod stops and is not billed while stopped; volume disk survives a stop and bills $0.20/GB-month while stopped.
+- **Contamination** — benchmark items (or close copies) present in training data, so a model can recall rather than reason; checked here with 13-gram overlap.
 - **Contingency** — the part of the budget (~35%, ~$130 here) held back for crashed runs, idle boxes and price changes.
 - **Control run** — the unchanged reference configuration of an ablation study (`configs/ablation_base.yaml`); run with two or more seeds to measure noise.
 - **CUDA driver compatibility** — PyTorch wheels built for CUDA 13.x need NVIDIA driver 580 or newer; an older driver means no usable GPU.
@@ -41,13 +48,17 @@ Terms used across the capstone, in alphabetical order.
 - **Export rule** — mygpt's constraint that the final model must be all-GPT-2 settings, the Llama bundle (RoPE, RMSNorm, SwiGLU, no bias) or the Qwen3 bundle (Llama + QK-norm), so it loads as a standard Hugging Face class.
 - **Fine-grained token** — a Hugging Face access token limited to chosen permissions and repositories, as opposed to classic read or write tokens.
 - **FineWeb-Edu** — Hugging Face's English web corpus (1.3T GPT-2 tokens) filtered from FineWeb by a classifier trained on Llama-3-70B-Instruct educational-value ratings; keeps pages with rounded score >= 3. ODC-By license.
+- **Gated model** — a Hub repo whose files are only served after a logged-in user requests access (approved automatically or manually); the author receives the user's details.
 - **Generation prompt** — the text appended after the last user turn at inference (`<|assistant|>\n`) so the model continues with an answer.
 - **Gradient accumulation** — summing gradients over several micro-batches before one optimizer step, so the effective batch stays fixed when fewer or smaller GPUs are used.
+- **Grid carbon intensity** — grams of CO2-equivalent emitted per kWh of electricity in a region; multiplied by energy used to estimate emissions.
 - **H100 PCIe / NVL** — H100 as a PCIe card (350-400 W, lower clocks; NVL: 94 GB, 835 TFLOP/s dense BF16); usually no NVLink to all other GPUs in the server.
 - **H100 SXM** — the socketed H100 module used on 8-GPU HGX boards: up to 700 W, 80 GB HBM3 at 3.35 TB/s, 900 GB/s NVLink, 989 TFLOP/s dense BF16.
 - **Hard stop** — a plain timer that stops the machine after a fixed time no matter what is running; the backstop behind an idle guard.
 - **HellaSwag acc_norm** — accuracy on HellaSwag's four-ending completion task when the ending with the lowest average per-token loss is chosen; chance is 0.25.
 - **HGX** — NVIDIA's 8-GPU baseboard where every GPU is connected to every other through NVLink switches.
+- **Home-field advantage (evaluation)** — a model scoring better on text from its own training distribution; why FineWeb-Edu bits per byte favours your models over OpenAI's.
+- **Honest-claims checklist** — the list in `EVAL_REPORT.md` that every claim must pass: identical settings, a file behind every number, intervals for "better", named metrics, contamination stated.
 - **Idle guard** — a script that stops a GPU box after its GPUs have been idle for a set number of minutes (`scripts/autoshutdown.sh`).
 - **Idle guard (auto-shutdown)** — a script that polls GPU utilization and stops the machine after N minutes idle.
 - **Implicit reward** — `rewards/chosen` and `rewards/rejected` in TRL logs: beta × (log-prob under the policy − log-prob under the reference) of an answer.
@@ -58,6 +69,7 @@ Terms used across the capstone, in alphabetical order.
 - **Ledger** — the dated list of every spend in `budget.md`, with the estimate before and the actual cost after each session.
 - **Length bias** — a judge's tendency to prefer longer answers regardless of quality; checked by comparing answer lengths of wins and losses.
 - **LLM-as-a-judge** — using a strong language model to compare or grade answers; cheap and scalable, but biased towards position and length.
+- **lm-eval-harness** — EleutherAI's open-source benchmark runner (`lm_eval`); this course pins version 0.4.13 and runs every model with one fixed configuration.
 - **LoRA (low-rank adaptation)** — fine-tuning small low-rank adapter matrices next to frozen weights; saves memory for large models, saves little for a 350M model, and produces an adapter rather than a full model.
 - **Loss mask** — the per-token flags (label -100 in Hugging Face) that exclude tokens from the loss while still feeding them to the model.
 - **Loss spike** — a sudden rise of the training loss; normal if it recovers within a few hundred steps, a divergence if it does not.
@@ -67,6 +79,7 @@ Terms used across the capstone, in alphabetical order.
 - **meta.json** — description of a shard directory: tokenizer, vocab size, EOT id, tokens, bytes and documents per split; used for bits-per-byte and checks.
 - **MFU (model FLOPs utilization)** — achieved model FLOP/s (≈ 6·N·tokens/s) divided by the GPU's dense peak; 30-50% is typical for well-tuned small-model training.
 - **Mixed precision with fp32 master weights** — keeping weights and optimizer state in fp32 while running matmuls in bf16 autocast; without the fp32 copy, small updates are rounded away by bf16's ~3 significant digits.
+- **Model card** — the `README.md` of a Hub model repo: YAML metadata (license, datasets, library, eval results, CO2) plus text on training data, evaluation, intended use and limitations.
 - **Multipart upload** — splitting a large object into chunks uploaded in parallel; tuned in rclone with `--s3-chunk-size` and `--s3-upload-concurrency`.
 - **Muon** — optimizer for 2D weight matrices that orthogonalises the momentum update with Newton–Schulz iterations; embeddings, head and norms stay on AdamW.
 - **NCCL hang** — a collective operation (e.g. all-reduce) that never completes because one rank died or is stuck; the job stops logging while the GPUs may still show 100% utilization.
@@ -79,6 +92,7 @@ Terms used across the capstone, in alphabetical order.
 - **Over-optimization** — DPO driving down the likelihood of even the chosen answers while train accuracy approaches 1; answers become long, repetitive or odd.
 - **Over-training** — training a fixed-size model on more tokens than compute-optimal, trading training compute for a better small model that is cheaper to use.
 - **Packing** — concatenating several short examples into one fixed-length row to avoid padding; in TRL 1.17 the default best-fit-decreasing packing needs padding-free FlashAttention to keep examples from attending to each other.
+- **Paired bootstrap** — resampling the items both models answered, many times, to get a confidence interval for the difference of their scores; narrower than an unpaired interval because the models' errors are correlated.
 - **Pairwise win rate** — the share of prompts where model B's answer is judged better than model A's, with ties usually counted as half.
 - **Parquet** — columnar, compressed file format used by Hugging Face datasets; FineWeb-Edu ships ~2.15 GB parquet files.
 - **Planning rate** — the assumed price per GPU-hour used before real prices and throughput are measured; $4.00 in this course until lesson 04.3.
@@ -87,12 +101,15 @@ Terms used across the capstone, in alphabetical order.
 - **Pre-flight check** — a scripted list of checks run on the rented node right before an expensive launch (frozen commit, data, bucket, logging, GPUs, disk, stop guards, money); in this course `tools/preflight.py`.
 - **Preference pair** — two answers to the same prompt, one labelled `chosen` (better) and one `rejected`; the training unit of DPO and reward models.
 - **Prepaid credit** — a balance loaded in advance (RunPod, Vast.ai, LLM APIs); with automatic top-up off, an empty balance stops spending.
+- **PUE (power usage effectiveness)** — data-centre total energy divided by IT equipment energy (around 1.1–1.5); used to turn GPU energy into facility energy for CO2 estimates.
 - **Push protection** — GitHub secret scanning that blocks pushes containing known secret formats; on by default for users' pushes to public repositories.
 - **QK-norm** — normalising queries and keys per head before the attention dot product; widens the range of stable learning rates (used in Qwen3).
+- **Rate limit** — a cap on requests per client per time window that keeps one visitor or script from monopolising a demo.
 - **rclone** — command-line tool that copies, checks and syncs files between local disks and dozens of storage backends.
 - **rclone copy vs sync** — `copy` only adds and updates files at the destination; `sync` also deletes destination files that are missing at the source.
 - **Reference model** — a frozen copy of the starting (SFT) model whose log-probabilities anchor DPO; TRL loads it automatically in the policy's dtype.
 - **Regression check** — re-running the pretraining benchmarks with identical settings after post-training to make sure base skills were not lost.
+- **Revision (Hub)** — a branch, tag or commit of a Hub repo; `from_pretrained(..., revision="v1.0")` loads exactly that version.
 - **Reward accuracy / margin** — the share of pairs where the chosen answer has the higher implicit reward, and the average reward difference; useful for health checks, not for choosing the better chat model.
 - **RMSNorm** — normalisation that divides by the root mean square of the activations with a learned scale, without LayerNorm's mean subtraction and bias.
 - **Rollback** — resuming from a checkpoint taken before a divergence, with diverged checkpoints moved aside so that auto-resume cannot pick them up.
@@ -101,6 +118,7 @@ Terms used across the capstone, in alphabetical order.
 - **RunPod secret** — a value stored in RunPod and substituted into a pod's environment at boot via `{{ RUNPOD_SECRET_name }}`; never shown again after creation.
 - **runpodctl** — RunPod's CLI; preinstalled in pods with a pod-scoped key, so `runpodctl pod stop $RUNPOD_POD_ID` can stop the pod from inside.
 - **S3-compatible API** — the Amazon S3 protocol implemented by other providers (Cloudflare R2, Backblaze B2, Hugging Face buckets), so the same tools work everywhere.
+- **safetensors** — a weights file format that stores only tensors (no executable code), unlike pickle-based `*.bin`/`*.pt` files that can run code when loaded.
 - **Scaling efficiency** — multi-GPU throughput divided by (number of GPUs × single-GPU throughput); ~0.9 is a planning value for 8×H100 SXM with NVLink.
 - **secrets.env** — the private file `~/.config/mygpt/secrets.env` (mode 600, outside any repo) holding the learner's API keys as environment variables.
 - **Seed spread** — the difference in the final metric between control runs that differ only in the random seed; twice the spread is the course's decision threshold.
@@ -109,11 +127,14 @@ Terms used across the capstone, in alphabetical order.
 - **skip_batches** — `mygpt.train` override that, on resume, advances the data loader past N global batches, to step over the data that triggered a spike (as PaLM did).
 - **Smoke run** — a tiny training run (`configs/smoke_cpu.yaml`) that exercises config, training, validation, checkpointing and resume in under a minute on a CPU.
 - **smol-smoltalk** — Hugging Face's Apache-2.0 SFT dataset for models under 1B parameters (460k train conversations), the SFT data of SmolLM2-360M-Instruct.
+- **Space (Hugging Face)** — a git repo that Hugging Face builds and runs as a web app (Gradio, Docker or static), configured by the YAML header of its README.
 - **Special token** — a token id with a reserved meaning that the BPE never produces from ordinary text, such as `<|endoftext|>`.
 - **Spend limit (RunPod)** — RunPod's default cap of $80/hour on the combined hourly rate of an account's resources; a rate limit, not a total.
+- **Standard error (of a benchmark score)** — about √(p(1−p)/n) for accuracy p on n items; the noise from the finite size of the test set.
 - **Stop-loss** — a rule to stop and re-plan when a step costs more than its estimate by a set margin (25% in this course).
 - **Straggler** — the slowest GPU in a data-parallel job; every step waits for it, so one throttled GPU slows the whole node.
 - **SwiGLU** — gated MLP, down(SiLU(gate(x)) * up(x)); with hidden size 8/3·d it has the same parameters as a 4·d GELU MLP.
+- **Technical report** — a write-up of how a model was built and evaluated, with every number traceable to a file, including costs, failures and reproduction steps.
 - **Terminate vs stop** — terminating deletes a cloud machine and ends its billing; stopping or powering off can leave the disk, or on some providers the whole instance, billing.
 - **Tied embeddings** — using the input embedding matrix also as the output projection; untying adds vocab × width parameters but no matmul FLOPs.
 - **tmux** — terminal multiplexer that keeps processes running after an SSH connection drops (`tmux attach` to return).
@@ -132,3 +153,4 @@ Terms used across the capstone, in alphabetical order.
 - **WSD schedule (warmup-stable-decay)** — linear warmup, a long constant-LR phase, then a short decay (here the last 20% of steps); ends about level with cosine and lets the run length be chosen late.
 - **Xet** — Hugging Face's chunk-deduplicating storage and transfer backend; `hf_xet` is the default download client since huggingface_hub 1.0 (`HF_XET_HIGH_PERFORMANCE=1` to go faster).
 - **Xid error** — an NVIDIA driver error code in the kernel log (`dmesg`) that signals a GPU hardware or driver fault.
+- **ZeroGPU** — Hugging Face Spaces hardware that attaches a shared GPU only while a decorated function runs, billed to each visitor's daily quota instead of the Space owner.

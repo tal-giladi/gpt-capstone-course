@@ -1,0 +1,13 @@
+- **Model card** — the `README.md` of a Hub model repo: YAML metadata (license, datasets, library, eval results, CO2) plus text on training data, evaluation, intended use and limitations.
+- **safetensors** — a weights file format that stores only tensors (no executable code), unlike pickle-based `*.bin`/`*.pt` files that can run code when loaded.
+- **Revision (Hub)** — a branch, tag or commit of a Hub repo; `from_pretrained(..., revision="v1.0")` loads exactly that version.
+- **Gated model** — a Hub repo whose files are only served after a logged-in user requests access (approved automatically or manually); the author receives the user's details.
+- **ODC-By** — Open Data Commons Attribution License, FineWeb-Edu's license: free use of the data and derived databases with attribution.
+- **Apache-2.0** — a permissive license with an explicit patent grant; the common choice for open small-model weights.
+- **ZeroGPU** — Hugging Face Spaces hardware that attaches a shared GPU only while a decorated function runs, billed to each visitor's daily quota instead of the Space owner.
+- **Space (Hugging Face)** — a git repo that Hugging Face builds and runs as a web app (Gradio, Docker or static), configured by the YAML header of its README.
+- **Cold start** — the delay before a scaled-to-zero or sleeping service answers its first request, spent starting the container and loading the model.
+- **Rate limit** — a cap on requests per client per time window that keeps one visitor or script from monopolising a demo.
+- **Technical report** — a write-up of how a model was built and evaluated, with every number traceable to a file, including costs, failures and reproduction steps.
+- **PUE (power usage effectiveness)** — data-centre total energy divided by IT equipment energy (around 1.1–1.5); used to turn GPU energy into facility energy for CO2 estimates.
+- **Grid carbon intensity** — grams of CO2-equivalent emitted per kWh of electricity in a region; multiplied by energy used to estimate emissions.

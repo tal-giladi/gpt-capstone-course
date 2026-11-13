@@ -1,0 +1,7 @@
+# Pinned for the Space (checked 2026-11-13). Gradio itself comes from `sdk_version` in README.md,
+# so it is NOT listed here. torch 2.13.0 is the newest version on ZeroGPU's supported list;
+# on a CPU Space or a VPS you may use torch 2.15.0 instead (tested locally with 2.15.0+cpu).
+torch==2.13.0
+transformers==5.22.2
+tokenizers==0.23.3
+safetensors==0.8.0

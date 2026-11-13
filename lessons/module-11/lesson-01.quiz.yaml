@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    Your DPO output folder from TRL contains `model.safetensors`, `config.json`, tokenizer files,
+    `training_args.bin` and a `checkpoint-1200/` folder. What do you upload to the public repo?
+  options:
+    - Everything, so other people can resume training from exactly where you stopped.
+    - Everything except `checkpoint-1200/`, since `training_args.bin` documents the run settings.
+    - Only the weights, config, generation config and tokenizer files, plus your own model card.
+    - Only `model.safetensors`, since the Hub rebuilds config and tokenizer from the weights.
+  correct: 2
+  explanation: >-
+    `training_args.bin` is a pickle that can execute code when loaded, and checkpoint folders hold
+    optimizer state nobody needs. Without config and tokenizer files `from_pretrained` cannot load
+    the model at all.
+- id: q2
+  question: >-
+    You trained on FineWeb-Edu (ODC-By, Common Crawl terms), smol-smoltalk (Apache-2.0) and
+    UltraFeedback (MIT), and evaluated on no_robots (CC BY-NC). Which weights license fits best?
+  options:
+    - Apache-2.0, with the data licenses and the FineWeb-Edu attribution stated in the card.
+    - CC-BY-NC-4.0, because the no_robots evaluation set forbids any commercial use downstream.
+    - ODC-By 1.0, because weights trained on a database must carry the database's license.
+    - No license at all, so that the dataset terms alone decide what users may do with it.
+  correct: 0
+  explanation: >-
+    Nothing you trained on forbids a permissive license, and no_robots was only used to evaluate.
+    The card still names each dataset's terms and gives the attribution. A repo with no license
+    leaves users without any permission to reuse the weights.
+- id: q3
+  question: >-
+    You want to check that the published model really works for other people. Which test proves
+    the most?
+  options:
+    - Run `scripts/chat.py` against the local `release/` folder you uploaded from.
+    - Open the model page in your logged-in browser and try the inference widget.
+    - Load it by repo id in your usual environment, after running `hf auth login` again.
+    - Load it by repo id in a new venv with an empty `HF_HOME` and `HF_TOKEN` unset.
+  correct: 3
+  explanation: >-
+    Your normal environment has the files cached and a token that can read private repos, so it
+    hides a missing file or a repo that is still private. A fresh venv, empty cache and no token is
+    what a stranger has.
+- id: q4
+  question: >-
+    Your technical report says "evaluated `you/my-gpt-350m`". Next month you push a better DPO model
+    to `main`. What should you have done to keep the report reproducible?
+  options:
+    - Nothing, because the Hub keeps every old commit and readers can scroll through the history.
+    - Tag the evaluated commit `v1.0` and cite `you/my-gpt-350m@v1.0` in the report and card.
+    - Upload the new model to a new repo, since a repo must only ever hold one set of weights.
+    - Make the repo gated so that only readers of the report can download the first model.
+  correct: 1
+  explanation: >-
+    A tag pins exact bytes forever and can be passed as `revision="v1.0"`; `main` moves. A new repo
+    per update scatters downloads and links, and gating does not stop the weights from changing.

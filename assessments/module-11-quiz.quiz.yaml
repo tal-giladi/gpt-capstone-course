@@ -1,0 +1,118 @@
+- id: q1
+  question: >-
+    You want people to load your model with one line of `transformers` and you also want a backup
+    outside Hugging Face. The fp32 weights are 1.35 GB. Which combination fits?
+  options:
+    - A public R2 bucket on its r2.dev URL as the main download, with the Hub as the backup.
+    - Hugging Face Hub as the main home, and a GitHub Release asset as the backup copy.
+    - GitHub Releases as the main home, since release assets load directly with `from_pretrained`.
+    - Kaggle Models as the main home, with the Hub only for the model card and the demo Space.
+  correct: 1
+  explanation: >-
+    Only the Hub resolves `from_pretrained("you/name")`; a 1.35 GB file fits GitHub's 2 GiB per-asset
+    limit. The r2.dev URL is rate-limited and meant for development, not public downloads.
+- id: q2
+  question: >-
+    A teammate runs `python -m mygpt.export_hf --ckpt runs/main_350m --out hf/x --push you/my-gpt-350m`
+    before the model card is written and the repo does not exist yet. What happens?
+  options:
+    - The upload fails, because the Hub refuses repos that have no README model card.
+    - The repo is created private by default, so nothing is visible until you change it.
+    - The repo is created public, so the weights are out before the card and checks.
+    - The repo is created gated with automatic approval, so only logged-in users can see it.
+  correct: 2
+  explanation: >-
+    A new personal repo created by an upload uses the default visibility, which is public. Create it
+    with `hf repos create ... --private` first, check it, then make it public.
+- id: q3
+  question: >-
+    A colleague proposes gating your 350M model with automatic approval "to see who uses it". What is
+    the main cost of doing that?
+  options:
+    - Gated repos count against the private storage quota, which is only 100 GB on a free account.
+    - Gated models cannot be loaded by `transformers`, so users must download the files by hand.
+    - Gated repos disappear from search, so the model page can only be reached by a direct link.
+    - Every user needs an account and token, and you become responsible for their emails.
+  correct: 3
+  explanation: >-
+    Gating adds friction to every notebook and the demo, and the access list shares usernames and
+    emails with you, which you must then handle properly. Gated models still load with a token.
+- id: q4
+  question: >-
+    Your clean-environment test works, but your own laptop still had a private copy of the repo
+    cached. Which detail of the test made it trustworthy?
+  options:
+    - An empty `HF_HOME` and no `HF_TOKEN`, so files came from the public repo by tag.
+    - Running the test twice in a row, so that the second run used the downloaded cache.
+    - Using the same Python environment you trained in, so that versions matched exactly.
+    - Loading from the local `release/` folder, so that the test used the uploaded bytes.
+  correct: 0
+  explanation: >-
+    Only a fresh cache and no credentials reproduce a stranger's situation: a missing file or a repo
+    that is still private fails loudly. Local folders and your training environment hide both.
+- id: q5
+  question: >-
+    Your HF account is 12 days old. You need the demo live this week and want to spend as little as
+    possible. Which plan is sound?
+  options:
+    - Create a ZeroGPU Space now, since free accounts can host two ZeroGPU Spaces immediately.
+    - Rent a Space on a T4 small and set a sleep time, since it costs nothing while it sleeps.
+    - Take PRO for a month ($9), run the Space on CPU Basic, revisit ZeroGPU later.
+    - Run the demo on a 1-vCPU, 2 GB VPS, because CPU inference needs only one core per user.
+  correct: 2
+  explanation: >-
+    Free ZeroGPU hosting requires an account older than 30 days, and creating a Gradio Space on CPU
+    Basic needs a paid plan. A sleeping T4 still bills when visitors wake it; 2 GB of RAM cannot hold
+    fp32 weights plus torch.
+- id: q6
+  question: >-
+    On a CPU Space your app answers in 45 seconds and a second visitor sees nothing happening. Which
+    change helps most without spending money?
+  options:
+    - Switch the CPU model to bf16, since half precision always doubles CPU inference speed.
+    - Lower the answer cap to ~160 tokens and keep streaming so text appears as it is made.
+    - Raise `concurrency_limit` to 8, so that eight visitors are served at full speed in parallel.
+    - Remove the disclaimer and the rate limit, since they add latency to every request made.
+  correct: 1
+  explanation: >-
+    Generation time scales with answer length, and streaming shows progress immediately. bf16 was
+    slower than fp32 on the measured CPU, and parallel requests on 2 vCPUs share the same cores.
+- id: q7
+  question: >-
+    Your report says "DPO improved helpfulness". Which version of that claim belongs in a credible
+    technical report?
+  options:
+    - A win rate with its 95% CI, prompt count, judge model and position/length bias numbers.
+    - The highest win rate you saw across all judge runs, since it shows the model's potential.
+    - The DPO training reward accuracy, since it measures preference learning on the data directly.
+    - A few hand-picked chats where DPO clearly answered better than SFT, with no other numbers.
+  correct: 0
+  explanation: >-
+    A rate without its interval, sample size and known judge biases cannot be checked. Picking the
+    best run or the best examples overstates the effect, and reward accuracy is not answer quality.
+- id: q8
+  question: >-
+    Cleaning up, you find a Hetzner server you "powered off" in Module 3 and a Hetzner snapshot. What
+    do you do?
+  options:
+    - Nothing; powered-off servers and snapshots are free until you power them on again.
+    - Keep the server off, but delete the snapshot, since only snapshots bill when idle.
+    - Power the server on once, so that Hetzner recalculates the bill and stops charging.
+    - Delete both after checking nothing on them is needed; both bill until deleted.
+  correct: 3
+  explanation: >-
+    Hetzner bills servers whether running or powered off, and snapshots bill for their storage. Check
+    that the data is in the bucket or git, then delete; there is no undo.
+- id: q9
+  question: >-
+    The R2 token used by rclone sat in `~/.config/mygpt/r2.env` on several RunPod pods that are now
+    terminated. What is the right action?
+  options:
+    - Nothing, since terminated pods wipe their disks and the token cannot leak from them.
+    - Delete `r2.env` on your laptop, so that the token can no longer be used by anyone.
+    - Revoke it in Cloudflare; create a read-only token if you still need downloads.
+    - Rename the bucket, so that anyone holding the old token points at a missing bucket.
+  correct: 2
+  explanation: >-
+    Treat a key that sat on rented machines as exposed: revoking it in the console is the only thing
+    that stops it working. Deleting your local copy leaves every other copy valid.
