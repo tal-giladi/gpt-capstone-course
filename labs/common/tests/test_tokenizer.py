@@ -15,6 +15,11 @@ def test_trained_bpe_round_trip(tiny_tokenizer):
     assert len(tok.encode(sample)) < len(sample.encode()) / 2
     assert tok.encode_batch(["a b", "c"]) == [tok.encode("a b"), tok.encode("c")]
     assert "<|endoftext|>" in tok.decode([tok.eot_id])
+    # a literal EOT string inside web text is ordinary text, not a document break
+    literal = "x <|endoftext|> y"
+    assert tok.eot_id not in tok.encode(literal)
+    assert tok.eot_id not in tok.encode_batch([literal])[0]
+    assert tok.decode(tok.encode(literal)) == literal
 
 
 def test_gpt2_tiktoken():

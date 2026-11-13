@@ -1,0 +1,126 @@
+- id: q1
+  question: >-
+    For a d=1024, 24-layer model, going from a 32,768 to a 50,304 vocabulary adds about 18M
+    parameters and raises the output layer's share of training FLOPs from ~9% to ~14%, while
+    cutting tokens for the same text by a few percent. What is the fair summary?
+  options:
+    - 50,304 is clearly better, because fewer tokens always means less compute for the same data.
+    - Compute per byte is similar; 32k keeps more of a small model's weights in its blocks.
+    - 32k is clearly better, because larger vocabularies cannot be stored in uint16 shards.
+    - The two are identical, because vocabulary size has no effect on compute or parameters.
+  correct: 1
+  explanation: >-
+    Fewer tokens times a more expensive output layer nets out to roughly equal compute per byte.
+    The tie-breakers are where parameters sit, logits memory, and having the vocabulary be a
+    multiple of 128; both sizes fit in uint16.
+- id: q2
+  question: >-
+    Your tokenizer training on 2,000,000 documents was killed by the out-of-memory killer on a
+    32 GB box. The deadline is today. What is the best move?
+  options:
+    - Rent a 192 GB box, since a 32k tokenizer needs every document of the 30 files to be good.
+    - Switch to GPT-2's tokenizer for the main run, since your own cannot be trained on this box.
+    - Lower the vocabulary to 16,384, since memory scales with the number of merges learned.
+    - Retrain on 500,000 documents; at 32k merges, more text barely changes compression.
+  correct: 3
+  explanation: >-
+    A few GB of in-domain text is enough for a 32k BPE; nanochat uses about 2B characters. Memory
+    grows with the amount of text counted, so fewer documents fixes it at almost no quality cost.
+- id: q3
+  question: >-
+    A trial on your 16-vCPU box gives 2.4M tokens/s for your BPE. About how long will 22.5B tokens
+    take, and what follows for the ledger?
+  options:
+    - About 2.6 hours; you write that estimate in the ledger before you start.
+    - About 26 minutes, since the trial already ran on all cores at full speed with 15 workers.
+    - About 9 hours, since a long run slows down as the page cache fills with parquet data.
+    - It cannot be estimated, because tokenization speed varies too much between documents.
+  correct: 0
+  explanation: >-
+    22.5e9 / 2.4e6 ≈ 9,400 s ≈ 2.6 h, because the trial measured the whole box with all workers. The
+    rule is to write the estimate before spending, then the actual cost after.
+- id: q4
+  question: >-
+    On the GPU box, the main-run config reads `data/tok/bpe32k-100BT-30`, but your shards are in the
+    bucket under `tok/own-tokens/`. The run fails with `no train_*.bin shards`. What is the lasting fix?
+  options:
+    - Edit the config's `data_dir` to wherever you copied the shards on each box.
+    - Move the bucket folder to the course's name so every config and lesson finds it.
+    - Symlink the folder on every box, since renaming objects in R2 is not possible.
+    - Re-tokenize into the right name, since the shard headers record their folder name.
+  correct: 1
+  explanation: >-
+    The configs, sync.sh and later lessons all assume `tok/<name>/` matching `data/tok/<name>/`.
+    Following the convention once (copy to the right prefix, then delete the old one) saves fixing
+    it on every box; headers do not contain folder names.
+- id: q5
+  question: >-
+    `shard_check.py` reports for your BPE set: token totals OK, ids below vocab OK, but 9,800 more
+    end-of-text tokens than documents. What does it mean and what do you do?
+  options:
+    - The val split ended mid-document; lower `--val-tokens` and re-tokenize only the val split.
+    - Some documents were empty; empty documents get two end-of-text tokens, which is harmless.
+    - Literal `<|endoftext|>` text became real boundaries; fix the tokenizer, re-tokenize.
+    - The shards are corrupt from a bad upload; pull them again from the bucket and re-check.
+  correct: 2
+  explanation: >-
+    Every document is written as one end-of-text plus its tokens, so extra end-of-text ids come
+    from the text itself being encoded as the special token. The fix is in encoding: special
+    strings in pretraining text must stay ordinary text.
+- id: q6
+  question: >-
+    `val_overlap.py` shows 0 documents shared between your two inputs. A friend says you can now
+    compare the baseline's and your model's losses on their own val splits directly. What is missing?
+  options:
+    - Nothing; with no overlap, per-token losses on the two val splits are directly comparable.
+    - The val splits must first be decontaminated against HellaSwag before any comparison.
+    - The baseline must be retrained on the common val set so both see the same text.
+    - Losses must become bits per byte, since the two tokenizers split text differently.
+  correct: 3
+  explanation: >-
+    No overlap makes both splits honest held-out sets, but a loss per token depends on how much
+    text a token covers. Bits per byte normalises that; the common val set additionally makes the
+    text identical.
+- id: q7
+  question: >-
+    The decontamination scan reports 3.1% of HellaSwag items overlapping your training data and 0.2%
+    of PIQA. Which explanation is most plausible?
+  options:
+    - HellaSwag contexts come from WikiHow pages on the web; PIQA was written by crowd workers.
+    - HellaSwag has more items, and contamination percentages always grow with benchmark size.
+    - PIQA is a test split, which benchmark authors protect from crawlers with robots.txt rules.
+    - The 13-gram window is biased toward long items, and PIQA items are all under 13 tokens.
+  correct: 0
+  explanation: >-
+    Overlap depends on where a benchmark's text came from. Scraped sources such as WikiHow are
+    likely to be in Common Crawl, while newly written items mostly are not. A percentage does not
+    grow with the number of items.
+- id: q8
+  question: >-
+    You want to remove 2,300 flagged documents from the main set. Re-tokenizing with `--exclude`
+    would take ~3 hours; `filter_shards.py` rewrites only affected shards in minutes. What must be
+    true before you run the filter?
+  options:
+    - The val split must be filtered first, since the filter rewrites val shards as well.
+    - The shards must be deleted from the bucket first, so the filtered copy does not collide.
+    - The original set is checked in the bucket, and a dry run of the filter looks sane.
+    - The tokenizer must be retrained without the flagged documents, so ids stay consistent.
+  correct: 2
+  explanation: >-
+    The filter rewrites shards in place and a crash midway leaves a half-filtered folder, so the
+    checked original in the bucket is your way back. Val shards are never touched and the
+    tokenizer does not depend on these documents.
+- id: q9
+  question: >-
+    Module 3 is done: four shard sets are checked in the bucket and the reports are in git. The CPU
+    box still has 160 GB of data on it. What do you do with the box?
+  options:
+    - Keep it until Module 5 so the GPU nodes can pull shards from it faster than from R2.
+    - Delete it now and verify the server list is empty; GPU boxes pull from the bucket.
+    - Power it off, which keeps the data for later at no hourly cost.
+    - Keep it but delete the raw parquet, so it only bills for the smaller disk.
+  correct: 1
+  explanation: >-
+    Everything needed is in the bucket and git, and the server bills until it is deleted,
+    powered off or not, at about €130 a month. R2 has free egress, so GPU boxes pull shards
+    directly at no transfer cost.

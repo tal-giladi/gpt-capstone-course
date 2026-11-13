@@ -1,0 +1,57 @@
+- id: q1
+  question: >-
+    `val_overlap.py` reports that 6% of the main set's validation documents also occur in
+    `sample-10BT`. In Module 8 you want to show your model beats the baseline. Which comparison do
+    you report?
+  options:
+    - Loss per token of each model on the main set's val split, since it is the larger split.
+    - Bits per byte of both models on the main val split, since 6% overlap is within noise.
+    - Bits per byte of both models on the common val set, which neither model trained on.
+    - Loss per token of each model on its own val split, since both splits are held out.
+  correct: 2
+  explanation: >-
+    Different tokenizers make per-token losses incomparable, so you use bits per byte. On the main
+    val split the baseline has trained on 6% of the text, which flatters the baseline; the common
+    val set is identical text held out from both.
+- id: q2
+  question: >-
+    The decontamination scan of your BPE set reports 0 overlapping items for every benchmark, while
+    the GPT-2 set shows hundreds of HellaSwag hits. What is the most likely reason?
+  options:
+    - The benchmark text was tokenized with GPT-2 while the shards use your tokenizer.
+    - The BPE set comes from sample-100BT, which Hugging Face decontaminated against HellaSwag.
+    - The 13-gram window is too long for a 32k vocabulary, so it should be lowered to 8.
+    - Your own tokenizer splits words differently, so contamination cannot exist in its shards.
+  correct: 0
+  explanation: >-
+    The scan compares token 13-grams, so the benchmark must be tokenized with exactly the tokenizer
+    of the shards. Pointing `--tokenizer` at the shard folder (which holds its tokenizer.json) fixes
+    it; zero hits on HellaSwag in a 22B-token web sample is implausible.
+- id: q3
+  question: >-
+    The scan flags 2,300 documents in the 22B-token set, about 0.01% of tokens. Some matches are
+    WikiHow pages that HellaSwag contexts were taken from. What do you do with them?
+  options:
+    - Keep them, since 0.01% of tokens cannot change any benchmark result in a measurable way.
+    - Remove the matching HellaSwag items from the benchmark and report scores on the rest.
+    - Re-download FineWeb-Edu with a different seed so a fresh sample avoids these pages.
+    - Drop the documents from training, report the counts, and keep the benchmarks complete.
+  correct: 3
+  explanation: >-
+    Dropping costs almost nothing and removes the chance that the model recalls answers, while the
+    benchmark stays comparable with published numbers. A tiny token fraction can still matter
+    because the overlap is concentrated exactly on the items you score.
+- id: q4
+  question: >-
+    `filter_shards.py` was killed halfway through rewriting the BPE set because the disk filled up.
+    `meta.json` has no `decontam` entry. What is the safe recovery?
+  options:
+    - Run `filter_shards.py` again on the same folder, since it skips shards it already rewrote.
+    - Delete the local folder, pull the unfiltered set from the bucket, and filter again.
+    - Upload the folder as it is, since rclone only sends complete files to the bucket.
+    - Edit `meta.json` by hand to add a `decontam` entry, so the shards count as filtered.
+  correct: 1
+  explanation: >-
+    Some shards are already rewritten, so applying the original token ranges again would cut the
+    wrong text. The bucket still holds the unfiltered set because the upload runs only after a
+    successful filter and check.

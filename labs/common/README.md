@@ -11,7 +11,7 @@ Versions checked against PyPI on **2026-11-13**; tested on 2026-11-13 (CPU only,
 ## Install on a GPU box (Ubuntu + CUDA)
 
 ```bash
-git clone <your project repo> && cd <repo>/labs/common
+git clone <your project repo> && cd <repo>
 python3 -m venv .venv && source .venv/bin/activate      # or: uv venv && source .venv/bin/activate
 pip install -U pip
 pip install -e ".[dev]"            # core: torch (PyPI wheel = CUDA 13.0 build, needs driver >= 580), tiktoken, ...

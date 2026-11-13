@@ -20,6 +20,7 @@ from multiprocessing import Pool
 
 import numpy as np
 
+os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")  # we parallelize with processes instead
 sys.path.insert(0, os.path.dirname(__file__))
 
 _TOK = None

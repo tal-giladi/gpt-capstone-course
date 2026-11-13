@@ -1,0 +1,19 @@
+- **budget.md** — the learner's budget file at the root of the project repo: the $500 plan, spending rules, kill checklist, accounts/alerts table and the ledger `| date | lesson | item | estimate | actual |`.
+- **Ledger** — the dated list of every spend in `budget.md`, with the estimate before and the actual cost after each session.
+- **Planning rate** — the assumed price per GPU-hour used before real prices and throughput are measured; $4.00 in this course until lesson 04.3.
+- **Contingency** — the part of the budget (~35%, ~$130 here) held back for crashed runs, idle boxes and price changes.
+- **Stop-loss** — a rule to stop and re-plan when a step costs more than its estimate by a set margin (25% in this course).
+- **Kill checklist** — the steps before leaving any rented machine: results safe, terminate, empty instance list, billing checked, ledger line.
+- **Terminate vs stop** — terminating deletes a cloud machine and ends its billing; stopping or powering off can leave the disk, or on some providers the whole instance, billing.
+- **Hard stop** — a timer started on a rented box that stops it after a fixed number of hours, whatever happens.
+- **Idle guard** — a script that stops a GPU box after its GPUs have been idle for a set number of minutes (`scripts/autoshutdown.sh`).
+- **Prepaid credit** — a balance loaded in advance (RunPod, Vast.ai, LLM APIs); with automatic top-up off, an empty balance stops spending.
+- **Budget alert** — an email when spending passes a threshold (for example Cloudflare budget alerts); informational only, it never caps usage.
+- **Spend limit (RunPod)** — RunPod's default cap of $80/hour on the combined hourly rate of an account's resources; a rate limit, not a total.
+- **Fine-grained token** — a Hugging Face access token limited to chosen permissions and repositories, as opposed to classic read or write tokens.
+- **Push protection** — GitHub secret scanning that blocks pushes containing known secret formats; on by default for users' pushes to public repositories.
+- **Two-factor authentication (2FA)** — a second login factor such as an authenticator-app code, required here on every account that can spend money or hold secrets.
+- **secrets.env** — the private file `~/.config/mygpt/secrets.env` (mode 600, outside any repo) holding the learner's API keys as environment variables.
+- **uv** — Astral's fast Python package and project manager; creates the virtualenv, installs Python itself and selects PyTorch wheels with `--torch-backend`.
+- **Smoke run** — a tiny training run (`configs/smoke_cpu.yaml`) that exercises config, training, validation, checkpointing and resume in under a minute on a CPU.
+- **Auto-resume** — the trainer's behaviour of continuing from the latest checkpoint in `out_dir` (model, optimizer, step, data position, RNG) instead of starting over.

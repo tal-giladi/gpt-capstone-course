@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your baseline run on a rented 8×H100 node finished at 2 a.m. and the final checkpoint is
+    already copied to your bucket. You are in bed with your phone. What is the right move?
+  options:
+    - Leave the node running until morning so you can inspect the logs on it before deciding.
+    - Terminate it from the provider console on your phone, then check the instance list.
+    - Stop the node so the disk survives, and terminate it later after looking at the logs.
+    - Run `sudo shutdown -h now` over SSH so the machine is powered off until you need it.
+  correct: 1
+  explanation: >-
+    With the checkpoint safe, the node holds nothing you need, and every hour costs $21–37.
+    Stopping keeps disk billing and an OS shutdown does not stop billing on Lambda, Vast.ai or
+    Hetzner; terminating and checking the list is the only reliable end.
+- id: q2
+  question: >-
+    Your plan estimated $50 for the baseline. Halfway through, the ledger and the provider's usage
+    page show you will land at about $68. Following the spending rules, what do you do?
+  options:
+    - Stop at the next checkpoint, find why it is slower or pricier, and re-plan first.
+    - Let it finish, since the contingency of $130 exists to absorb exactly this kind of overrun.
+    - Switch immediately to an interruptible instance at half the price to make up the difference.
+    - Cancel the run and restart on another provider without checkpoints, so costs are fresh.
+  correct: 0
+  explanation: >-
+    $68 is 36% over the estimate, past the 25% stop-loss. The overrun usually has a cause (slow
+    host, wrong config, higher price) that would also hit the far bigger main run, so you find it
+    first; checkpoints make pausing cheap.
+- id: q3
+  question: >-
+    You set a Cloudflare budget alert at $5 and a RunPod low-balance email. A friend says that means
+    your spending is capped. What is accurate?
+  options:
+    - Both cap spending, because Cloudflare suspends R2 and RunPod stops pods once the alert fires.
+    - Only the Cloudflare alert caps spending, because budget alerts pause usage-based products.
+    - Neither caps anything by itself; only an empty prepaid balance actually stops a RunPod pod.
+    - The RunPod email caps spending, because the alert disables new deployments at that balance.
+  correct: 2
+  explanation: >-
+    Alerts are informational: Cloudflare states budget alerts do not pause or cap usage. On RunPod
+    the hard stop is the prepaid balance reaching $0, which is why the rules say prepaid credit
+    with automatic top-up turned off.
+- id: q4
+  question: >-
+    At today's price your 8-GPU nodes cost $4.89 per GPU-hour instead of the planned $4.00. Using
+    the plan's ~12 GPU-hours for the baseline and ~40 for the main run, what changes?
+  options:
+    - Nothing, since the 35% contingency was sized for GPU price changes of this kind.
+    - The whole budget rises by 22%, so the total becomes about $610 and breaks the cap.
+    - Only the main run changes, by about $9, because the baseline is too short to matter.
+    - Those two lines rise by about $46; record it and take it from the contingency.
+  correct: 3
+  explanation: >-
+    52 GPU-hours × $0.89 ≈ $46 more on the two 8-GPU lines only; storage, CPU and 1-GPU lines are
+    priced separately. Recompute and write it down: it eats a third of the contingency before
+    anything has gone wrong.

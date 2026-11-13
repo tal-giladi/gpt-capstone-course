@@ -1,0 +1,35 @@
+# .gitignore for your GPT capstone project repo (copied to the repo root in lesson 01.3,
+# replacing the shorter one that comes with the lab code; it contains all of its entries).
+
+# Secrets: never in git
+.env
+*.env
+!*.env.example
+*.pem
+*.key
+
+# Python and tools
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data, shards, checkpoints, models: they live in the bucket, not in git
+data/
+runs/
+hf/
+wandb/
+judge_out/
+tokenizers/
+bench.jsonl
+*.bin
+*.pt
+*.safetensors
+*.parquet
+*.arrow
+
+# OS clutter
+.DS_Store
+Thumbs.db

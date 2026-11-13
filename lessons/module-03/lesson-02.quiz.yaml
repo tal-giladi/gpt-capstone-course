@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your 2-minute trial on a 16-vCPU box shows 2.0M tokens/s for your BPE. The same provider's
+    48-vCPU type costs 3× as much per hour. Ignoring setup time, how do they compare for 22.5B tokens?
+  options:
+    - The 48-vCPU box costs about 3× more in total, since it costs 3× more per hour.
+    - The 48-vCPU box is cheaper in total, because bigger boxes get a volume discount per core.
+    - Both cost the same, because tokenization speed does not depend on the number of cores.
+    - Total cost is similar since core-hours are fixed; the big box mainly saves wall time.
+  correct: 3
+  explanation: >-
+    22.5B / 2.0M per second is about 3.1 h on 16 vCPU. Three times the cores at the same price per
+    core finish in about a third of the time, so the bill is about the same; what you buy is wall
+    time. Compare price per core-hour, not per hour.
+- id: q2
+  question: >-
+    The BPE tokenization is running with 15 workers, `htop` shows every core at 100% and the load
+    average is about 200, yet throughput is half the trial's. What do you check first?
+  options:
+    - Whether `TOKENIZERS_PARALLELISM=false` is set, so workers don't each start threads.
+    - Whether the disk is full, because a full disk makes every core spin at 100% while waiting.
+    - Whether the parquet files are corrupt, because decoding errors are retried in a busy loop.
+    - Whether rclone is still uploading, because uploads always use every core of the machine.
+  correct: 0
+  explanation: >-
+    A load far above the core count means many more threads than cores: each worker process runs
+    the Rust tokenizer's own thread pool. Disabling that parallelism leaves one thread per worker
+    and restores throughput.
+- id: q3
+  question: >-
+    `shard_check.py` on your BPE set reports 4,112 more end-of-text tokens than documents in
+    meta.json. Everything else is OK. What do you do?
+  options:
+    - Ignore it, since 4,112 extra boundaries in 22B tokens cannot measurably change training.
+    - Fix the tokenizer so literal special strings stay text, then re-tokenize the set.
+    - Delete the extra end-of-text tokens from the shards with a script and update meta.json.
+    - Lower `--val-tokens`, since extra boundaries appear when the val split ends mid-document.
+  correct: 1
+  explanation: >-
+    Extra end-of-text tokens mean pages that quote the string were split by real boundary tokens.
+    The cause is in encoding, so the clean fix is to correct the tokenizer and re-tokenize;
+    patching shards by hand cannot tell real boundaries from fake ones.
+- id: q4
+  question: >-
+    The tokenization finishes at 1 a.m. You plan to do lesson 03.3 tomorrow evening. What is the
+    right way to leave the box?
+  options:
+    - Power it off from the console so it costs nothing until tomorrow evening.
+    - Leave it running, because re-downloading 93 GB tomorrow would cost more than the box.
+    - Upload and check both shard sets, then delete the server and recreate one tomorrow.
+    - Delete the raw parquet files on the box to stop storage billing, and keep the server.
+  correct: 2
+  explanation: >-
+    A Hetzner server bills until it is deleted, also when powered off. With the shards checked in
+    the bucket, nothing on the box is needed; pulling data into a new box tomorrow takes minutes
+    and transfer between Hetzner and R2 costs nothing.

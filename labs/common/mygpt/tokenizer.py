@@ -37,6 +37,9 @@ class HFBPETokenizer:
         file = os.path.join(path, "tokenizer.json") if os.path.isdir(path) else path
         self.name = os.path.abspath(os.path.dirname(file))
         self._tok = Tokenizer.from_file(file)
+        # A literal "<|endoftext|>" inside web text must stay ordinary bytes, never the real EOT
+        # id, or such pages get fake document breaks. EOT is always inserted by id instead.
+        self._tok.encode_special_tokens = True
         self.eot_id = self._tok.token_to_id(EOT)
         assert self.eot_id is not None, f"{file} has no {EOT} token"
         self.vocab_size = self._tok.get_vocab_size()

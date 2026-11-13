@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    A teammate wants a 65,536-token vocabulary for the ~350M main model "because bigger vocabularies
+    compress better". Using the lesson's numbers, what is the strongest reply?
+  options:
+    - 65,536 does not fit in uint16 shards, so the data pipeline would have to switch to uint32.
+    - The saved tokens are paid back by a bigger output layer and 34M more embedding weights.
+    - Larger vocabularies always compress worse on English, so the token count would go up, not down.
+    - The GPT-2 baseline uses 50,257, so the main model must use the same size to be comparable.
+  correct: 1
+  explanation: >-
+    At d=1024 the output layer grows from ~9% to ~17% of training FLOPs per token, roughly
+    cancelling the few percent fewer tokens, and the extra embedding rows do little for a small
+    model. 65,536 ids still fit uint16, and comparisons use bits per byte, not equal vocabularies.
+- id: q2
+  question: >-
+    You train the tokenizer on the first 500,000 documents of `000_00000.parquet` and measure its
+    bytes per token on the next 20,000 documents of that file. What is the problem?
+  options:
+    - The first file of a FineWeb-Edu sample is sorted by score, so it is not representative.
+    - 20,000 documents are too few to measure bytes per token to better than about 10%.
+    - Those documents become the validation split, so the tokenizer is fit to val text.
+    - Bytes per token can only be measured on GPT-2-tokenized shards, not on parquet files.
+  correct: 2
+  explanation: >-
+    tokenize_shards.py puts the first ~50M tokens of the input into val_*.bin. Training the
+    tokenizer elsewhere (the 30th file) and measuring on the start of 000_00000 keeps both the
+    validation split and the compression measurement clean.
+- id: q3
+  question: >-
+    The check prints `FAIL literal '<|endoftext|>' in ordinary text is encoded as the real EOT id`.
+    Why does that matter for 22B tokens of web text?
+  options:
+    - The tokenizer will crash on such pages during tokenization, losing hours of work.
+    - Every document containing that string would be dropped from the training data silently.
+    - The model would learn to print the string `<|endoftext|>` instead of stopping.
+    - Pages quoting it would be cut into fake documents by a real boundary token.
+  correct: 3
+  explanation: >-
+    In pretraining data the string must stay ordinary text. Turned into id 0, it inserts a
+    document boundary in the middle of a page, and the document count no longer matches the
+    number of end-of-text tokens, which shard_check.py later reports.
+- id: q4
+  question: >-
+    You plan SFT in Module 9 with this tokenizer, which has only `<|endoftext|>` as a special token.
+    What does the project's chat format do?
+  options:
+    - It writes plain-text `<|user|>`/`<|assistant|>` tags and ends answers with end-of-text.
+    - It adds ChatML tokens to the vocabulary at SFT time and trains their embeddings from scratch.
+    - It needs a second tokenizer for chat, because the pretraining tokenizer cannot mark turns.
+    - It cannot mark the end of an answer, so generation always stops at the maximum length.
+  correct: 0
+  explanation: >-
+    `export_hf.py` writes a chat template with text tags that tokenize into a few ordinary tokens,
+    and the answer ends with the existing end-of-text token. The vocabulary, and so the
+    embeddings, never change after pretraining.

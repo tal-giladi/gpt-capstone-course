@@ -102,8 +102,16 @@ def main(argv=None):
     flagged: list = []
     scanned = 0
 
+    def in_table(h: np.ndarray) -> np.ndarray:
+        """Membership test against the sorted table (searchsorted is ~5x faster than np.isin)."""
+        if table.size == 0:
+            return np.zeros(h.shape, dtype=bool)
+        i = np.searchsorted(table, h)
+        i[i == table.size] = 0
+        return table[i] == h
+
     def record(hashes: np.ndarray) -> bool:
-        hits = np.unique(hashes[np.isin(hashes, table)])
+        hits = np.unique(hashes[in_table(hashes)])
         for h in hits.tolist():
             for name, i in owners[h]:
                 hit_items[name].add(i)
@@ -118,7 +126,7 @@ def main(argv=None):
             for start in range(0, toks.size, args.chunk_tokens):
                 chunk = np.asarray(toks[start:start + args.chunk_tokens + args.n - 1])
                 h = ngram_hashes(chunk, args.n)
-                mask = np.isin(h, table)
+                mask = in_table(h)
                 if mask.any():
                     record(h[mask])
                     pos = np.flatnonzero(mask) + start

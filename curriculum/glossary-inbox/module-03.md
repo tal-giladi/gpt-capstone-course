@@ -1,0 +1,16 @@
+- **Byte-level BPE** — byte-pair encoding over the 256 byte values, so any UTF-8 text round-trips losslessly with no unknown tokens; GPT-2's tokenizer and this course's 32k tokenizer are byte-level BPEs.
+- **Vocabulary size** — number of distinct token ids; it sets the embedding and output-layer size (V × d parameters, about 6·V·d training FLOPs per token for the output layer).
+- **Bytes per token** — UTF-8 bytes of text divided by tokens produced; the tokenizer's compression. GPT-2 gets ~4.5–4.6 on FineWeb-Edu.
+- **Bits per byte (bpb)** — validation loss converted to bits and divided by bytes of text instead of tokens; comparable across tokenizers, unlike loss per token.
+- **Special token** — a token id with a reserved meaning that the BPE never produces from ordinary text, such as `<|endoftext|>`.
+- **End-of-text token (EOT)** — `<|endoftext|>`, written before every document in the shards and used to end answers in SFT; id 50256 for GPT-2, id 0 for the course tokenizer.
+- **encode_special_tokens** — Hugging Face `tokenizers` setting; when true, special-token strings found inside input text are encoded as ordinary text instead of as the special id.
+- **Token shard** — a binary file of uint16 token ids with a 1 KB header (magic 20261113, version, token count, vocab size); up to 100M tokens (200 MB) each.
+- **uint16** — 16-bit unsigned integer (0–65,535); stores token ids in 2 bytes, which limits the vocabulary to 65,536.
+- **meta.json** — description of a shard directory: tokenizer, vocab size, EOT id, tokens, bytes and documents per split; used for bits-per-byte and checks.
+- **Validation split** — the first ~50M tokens (whole documents) of each shard set's input, written to `val_*.bin` and never trained on.
+- **Common validation set** — main-run validation documents that do not occur in sample-10BT, tokenized with both tokenizers (`tok/common-val-gpt2/`, `tok/common-val-bpe32k/`) for comparing the baseline and the main model on identical held-out text.
+- **Benchmark contamination** — benchmark items (or most of their text) present in the training data, which lets a model recall instead of reason and inflates scores.
+- **13-gram overlap** — contamination test used since GPT-3: an item is flagged if any 13-token window of it occurs in the training data.
+- **Decontamination** — removing training documents that overlap evaluation benchmarks (here by `decontam.py` plus `filter_shards.py`) and reporting what was removed.
+- **Token report** — `TOKEN_REPORT.md`: tokenizer facts, compression, shard sets, validation overlap and decontamination counts; cited by later configs and reports.

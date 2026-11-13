@@ -1,0 +1,125 @@
+- id: q1
+  question: >-
+    A classmate keeps raw data, token shards and checkpoints on the disk of a RunPod pod and stops
+    the pod between sessions "so nothing has to be copied". What is the main problem with this setup?
+  options:
+    - Stopped pods lose their volume disk after 24 hours, so the data disappears overnight.
+    - Copying data into a pod is billed per GB, so keeping it there is actually the cheaper choice.
+    - The data is tied to one host and keeps billing while stopped; the bucket should hold it.
+    - RunPod forbids storing datasets on pods, so the account can be suspended for it.
+  correct: 2
+  explanation: >-
+    A stopped pod's volume bills $0.20/GB-month, the pod can only restart on the same host (which
+    may be busy), and the data cannot reach a Lambda or Vast.ai fallback. The course keeps data and
+    checkpoints in R2 so every box is disposable.
+- id: q2
+  question: >-
+    Your evaluation box finished, results are pushed to git, and you ran `sudo poweroff` on the
+    Lambda instance. The dashboard still lists it. What is true?
+  options:
+    - It is still billing; you must terminate it in the dashboard or through the API.
+    - It stopped billing at power-off; the dashboard entry is only a record of the instance.
+    - It bills only its disk now, at a fraction of the hourly price, until you delete it.
+    - Lambda terminates powered-off instances automatically after an hour, so you can leave it.
+  correct: 0
+  explanation: >-
+    Lambda bills an instance until it is terminated; an OS shutdown does not stop billing. The
+    kill checklist ends with an empty instance list and a look at the usage page for exactly this
+    reason.
+- id: q3
+  question: >-
+    You must choose one LLM API for the judge in Module 10 and want the smallest worst case if its
+    key leaks. Which setup gives that?
+  options:
+    - A key with $100 of credit and auto-reload on, so the judge never fails in the middle of a run.
+    - A key on your personal account with no limit, stored in the repo's `.env.example` file.
+    - A key created by a friend on their account, so a leak cannot touch your card.
+    - About $5 of prepaid credit, auto-reload off, a $10 monthly limit, key kept outside the repo.
+  correct: 3
+  explanation: >-
+    A small prepaid balance with no auto-reload bounds the damage to a few dollars, and the
+    monthly limit adds a second cap. Auto-reload or no limits turn a leaked key into an open line
+    to your card.
+- id: q4
+  question: >-
+    `check_accounts.py` shows `WARN Hugging Face user=you token=write`. You are about to copy this
+    token onto a rented CPU box to download FineWeb-Edu. What do you do?
+  options:
+    - Use it, because a write token is needed for any download from a dataset repo.
+    - Create a fine-grained read-only token for the box and keep write access for Module 11.
+    - Use it but delete the box's shell history afterwards, so the token cannot be recovered.
+    - Use your HF password instead, since passwords cannot be used to push from scripts.
+  correct: 1
+  explanation: >-
+    Downloads need only read access. Rented boxes are shared hardware you do not control, so they
+    get the smallest token that works; a write token there could overwrite or delete your repos if
+    it leaks.
+- id: q5
+  question: >-
+    Midway through the course your measured 8-GPU price is $4.39 per GPU-hour and the main run
+    looks like 44 GPU-hours. The plan had $160 for it. With the stop-loss rule at +25%, what is
+    the right reading?
+  options:
+    - About $193 is 21% over plan, under the stop-loss; record it and use contingency.
+    - About $193 is past the stop-loss, so the main run must shrink before you start it.
+    - Any change to the plan's numbers means switching to the cheaper path immediately.
+    - The planned $160 still applies, since the plan was approved before prices were measured.
+  correct: 0
+  explanation: >-
+    44 × $4.39 ≈ $193, 21% above $160: under the 25% line, but real money. You update the ledger
+    and contingency now; lesson 04.3 makes this kind of call with your measured throughput.
+- id: q6
+  question: >-
+    Your Hetzner account is approved but every server creation fails with a capacity message for
+    new customers. Module 2 starts tomorrow. Which plan keeps the project on schedule and on budget?
+  options:
+    - Run the 93 GB download from home over the weekend on your laptop, whatever your upload speed.
+    - Rent a 1×H100 pod for the download, since you will need a GPU pod later anyway.
+    - Use a RunPod CPU pod with enough container disk, and write the change into budget.md.
+    - Create a new Hetzner account under a family member's name to get around the restriction.
+  correct: 2
+  explanation: >-
+    A RunPod CPU pod does download and tokenization at a similar price. A GPU pod would cost far
+    more for CPU work, a slow home link can take many hours, and a proxy account breaks the
+    provider's terms.
+- id: q7
+  question: >-
+    `git status --short` before your first push lists `runs/`, `.venv/` and `budget.md`. What does
+    that tell you?
+  options:
+    - All three should be committed so a rented box can resume training straight from git.
+    - The `.gitignore` is missing or misplaced; only `budget.md` belongs in the commit.
+    - Only `.venv/` is a problem, because checkpoints in `runs/` are small enough for git.
+    - Git is fine; GitHub drops virtual environments and checkpoints from pushes automatically.
+  correct: 1
+  explanation: >-
+    Environments are rebuilt by uv on every box and checkpoints go to the bucket; neither belongs
+    in git. `budget.md` is a project document and is committed and pushed after every lesson.
+- id: q8
+  question: >-
+    Your Cloudflare budget alert at $5 fires in the second week of the month, while the plan says R2
+    should cost under $3 a month. What is the best first step?
+  options:
+    - Ignore it, since budget alerts are often triggered by usage that was already billed earlier.
+    - Delete the bucket and recreate it, which resets the month's usage counters.
+    - Raise the alert to $15 so it matches the second alert and stops sending emails.
+    - Open Billable Usage, find which product or bucket grew, and fix the cause.
+  correct: 3
+  explanation: >-
+    The alert is doing its job: something stores or does more than planned, for example duplicate
+    uploads, an extra copy of the shards or another product. Alerts never cap spending, so you
+    find and fix the cause yourself.
+- id: q9
+  question: >-
+    On your laptop, `pytest -q` passes but the smoke run's loss stays flat at about 5.55 for all 20
+    steps. What is the most useful thing to check first?
+  options:
+    - Whether `smoke_cpu.yaml` or your overrides changed the learning rate or other train settings.
+    - Whether you installed the CPU build of PyTorch, since the CUDA build trains differently.
+    - Whether your laptop has enough RAM, since memory pressure freezes the loss at its first value.
+    - Whether W&B is logged in, since without it the trainer skips the optimizer step.
+  correct: 0
+  explanation: >-
+    A loss stuck at ln 256 means the model is not learning at all, which is almost always a
+    config problem such as a zero or tiny learning rate from an edit or an override typo.
+    `git diff configs/` and the printed parameter line show it quickly.

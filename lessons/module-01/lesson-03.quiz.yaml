@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    You rerun the smoke training with `train.train_tokens=40960` and it prints `step 1/40` with a
+    loss near 5.5 instead of continuing from step 21. What is the most likely cause?
+  options:
+    - The override changed the number of steps, and any change to the schedule forces a fresh start.
+    - The checkpoint is not in the run's `out_dir`, for example because you changed or deleted it.
+    - Resume only works on GPUs, so a CPU run always starts again from the first step.
+    - The synthetic data was regenerated with a new seed, which invalidates the checkpoint.
+  correct: 1
+  explanation: >-
+    Auto-resume looks for the latest checkpoint in `out_dir` only. Same `out_dir` and an existing
+    `ckpt_*.pt` mean it continues; a new or emptied folder means step 1, which on a real run
+    throws away paid GPU hours.
+- id: q2
+  question: >-
+    On your laptop, `uv pip install -e ".[dev]"` has been downloading `nvidia-cudnn` and other
+    multi-GB packages for ten minutes. What do you do?
+  options:
+    - Let it finish; the CUDA wheels are needed so the tests match the GPU boxes exactly.
+    - Switch to plain `pip install`, which skips the CUDA packages on machines without a GPU.
+    - Cancel and reinstall with `--torch-backend cpu`, since the laptop only runs CPU work.
+    - Install CUDA 13 drivers on the laptop first, so the downloaded wheels can actually be used.
+  correct: 2
+  explanation: >-
+    The default PyPI torch wheel pulls CUDA libraries you cannot use on a laptop. The CPU backend
+    installs a small wheel; GPU boxes install their own CUDA build in `setup_box.sh`.
+- id: q3
+  question: >-
+    The first smoke step prints a loss of 5.57 with a 256-token vocabulary. What does that tell you?
+  options:
+    - The model already learned the data, since 5.57 is low for a language model loss.
+    - The learning rate is too high, because a healthy first loss should be close to zero.
+    - The data loader is broken, because the loss should start at the data's entropy of ln 4.
+    - Training starts correctly, since a uniform guess over 256 tokens gives about ln 256.
+  correct: 3
+  explanation: >-
+    Cross-entropy of a uniform guess over V tokens is ln V, and ln 256 ≈ 5.55. A first loss far
+    above ln V points to a bad initialisation; the loss then falls toward the data's entropy.
+- id: q4
+  question: >-
+    Before your first push, `git status --short` lists `runs/smoke_cpu/ckpt_00000020.pt` and
+    `tools/secrets.env`. What is the right response?
+  options:
+    - Fix the root `.gitignore`, unstage both, and move secrets.env out of the repo.
+    - Push anyway, because the repo is private and only you can read it on GitHub.
+    - Delete the checkpoint, keep `tools/secrets.env` tracked, and rely on GitHub push protection.
+    - Commit both but encrypt the repo later in Module 11, before it becomes public.
+  correct: 0
+  explanation: >-
+    Both files mean the `.gitignore` is missing or misplaced. Secrets belong in
+    `~/.config/mygpt/`, outside any repo; private repos get cloned, forked and made public, and
+    push protection does not cover private repos by default.

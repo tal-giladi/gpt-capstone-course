@@ -1,0 +1,56 @@
+- id: q1
+  question: >-
+    Your rented CPU box needs to download FineWeb-Edu from Hugging Face. Which token do you put on
+    that box?
+  options:
+    - A classic write token, so the same token can later push your model from that box.
+    - A fine-grained token that can only read repository contents, nothing else.
+    - No token at all, since FineWeb-Edu is public and tokens only matter for private data.
+    - Your HF account password, set as an environment variable instead of a token.
+  correct: 1
+  explanation: >-
+    A token avoids the low anonymous rate limit, and a read-only fine-grained token limits the
+    damage if the box or its logs leak. Write access is only needed in Module 11 and should be
+    scoped to your own model and Space repos.
+- id: q2
+  question: >-
+    After a late-night session you notice you pasted your W&B API key into a notebook cell, and the
+    notebook was pushed to your public GitHub repo ten minutes ago. What do you do first?
+  options:
+    - Delete the cell, force-push the cleaned history, and keep using the same key afterwards.
+    - Make the repository private so nobody else can see the commit that contains the key.
+    - Revoke the key in W&B and create a new one, then remove it from the repo history.
+    - Add the notebook to `.gitignore` so the key is not pushed again in the next commit.
+  correct: 2
+  explanation: >-
+    Bots scan public GitHub within minutes, so the key must be treated as stolen. Revoking it is
+    the only step that removes the attacker's access; history cleanup comes after and does not
+    un-leak anything.
+- id: q3
+  question: >-
+    Hetzner accepted your signup but refuses to create a server, citing limited availability for new
+    customers. Module 2 needs a CPU box next week. What is the sensible plan?
+  options:
+    - Plan Modules 2–3 on a RunPod CPU pod, note it in budget.md, and keep Hetzner.
+    - Open a second Hetzner account with another email address so the new-customer rule resets.
+    - Do the 93 GB download and the tokenization on an 8×H100 pod, since you need one later anyway.
+    - Skip the CPU box and stream the data straight into training, so no download is needed.
+  correct: 0
+  explanation: >-
+    A RunPod CPU pod does the same job at a similar price, and you already need a RunPod account.
+    Duplicate accounts break Hetzner's terms and get flagged, and using GPUs for CPU work wastes
+    $20–35 an hour.
+- id: q4
+  question: >-
+    Why does this course set up prepaid credit with automatic top-up off on RunPod and Vast.ai, while
+    on Lambda it relies on terminating instances promptly?
+  options:
+    - Lambda's prices are lower, so a forgotten instance there costs too little to need a guard.
+    - Lambda stops instances automatically after an hour of idle GPUs, unlike the other two.
+    - RunPod and Vast.ai require prepaid credit by law, while Lambda is exempt as a US company.
+    - Lambda bills your card after use, so no balance can run out and stop a machine.
+  correct: 3
+  explanation: >-
+    Lambda invoices weekly for per-minute usage on a credit card, so there is no prepaid cap. On
+    RunPod and Vast.ai an empty balance stops the machine, which is a useful last-resort limit when
+    top-up is off.
