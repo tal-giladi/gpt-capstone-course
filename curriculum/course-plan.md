@@ -78,5 +78,5 @@ scratch versions you already wrote).
 ## 6. Open decisions for Tal
 
 1. ~~Main run size~~ DECIDED 2026-11-13: ~350M on ~20B tokens, ~$500 cap.
-2. Tokenizer: keep GPT-2's (clean comparison) or train your own (more "yours")?
+2. ~~Tokenizer~~ DECIDED 2026-11-13: train our own BPE on FineWeb-Edu for the main model; GPT-2's tokenizer only for the 124M baseline; compare loss in bits-per-byte.
 3. Course name/slug: `gpt-capstone-course` OK?
