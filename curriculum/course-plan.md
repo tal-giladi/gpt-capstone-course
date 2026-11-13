@@ -51,17 +51,17 @@ about $200–250.
 
 | # | Module | What you do | Artifact you keep |
 |---|---|---|---|
-| 0 | Plan, accounts, budget guardrails | Create HF, W&B, GitHub, cloud and storage accounts; set spending limits/alerts; budget tracker; project repo from template | Project repo + `budget.md` with live prices + alerts configured |
-| 1 | Data: get it, store it | Choose FineWeb-Edu (license ODC-BY), download sample-10BT/100BT shards, push to R2/B2, write a data card | Raw shards in your bucket + `DATA_CARD.md` |
-| 2 | Tokenize and shard | GPT-2 tokenizer (and optionally train your own BPE), tokenize on a CPU box, write uint16 shards, held-out val split, decontaminate vs eval sets | Tokenized shards in bucket + token count report |
-| 3 | GPUs: pick, rent, benchmark | Compare providers live, rent 1×H100, pinned Docker/uv env, smoke test, measure tokens/s and MFU, auto-shutdown script | Reproducible env + benchmark table |
-| 4 | Baseline: reproduce GPT-2 124M | Multi-GPU (DDP) run on 8×H100, checkpoint to bucket, resume after preemption, W&B dashboard | Baseline checkpoint + loss curves + HellaSwag score |
-| 5 | Make it yours: ablations | Run the improvement ladder on short runs, one change at a time, same seed/tokens; pick your recipe with evidence | Ablation table + chosen recipe (config) |
-| 6 | The main run | Launch your model on 8×H100, monitor loss spikes, handle failures, checkpoint/resume, stay on budget | Your base model weights |
-| 7 | Evaluate honestly | lm-eval-harness (HellaSwag, ARC, PIQA, …), compare to OpenAI GPT-2 and your baseline, contamination check | Eval report with tables/plots |
-| 8 | Instruction tuning (SFT) | Pick an open SFT dataset (e.g. SmolTalk), chat template, loss masking, train, sanity-chat | Chat model checkpoint |
-| 9 | Preference tuning (DPO) | Open preference data (e.g. UltraFeedback binarized), DPO, win-rate vs SFT | Aligned model + win-rate result |
-| 10 | Ship it | Upload to HF Hub with model card, Gradio demo Space, technical report, clean GitHub repo, final cost ledger | Public model + live demo + report (your portfolio piece) |
+| 1 | Plan, accounts, budget guardrails | Create HF, W&B, GitHub, cloud and storage accounts; set spending limits/alerts; budget tracker; project repo from template | Project repo + `budget.md` with live prices + alerts configured |
+| 2 | Data: get it, store it | Choose FineWeb-Edu (license ODC-BY), download sample-10BT/100BT shards, push to R2/B2, write a data card | Raw shards in your bucket + `DATA_CARD.md` |
+| 3 | Tokenize and shard | GPT-2 tokenizer (and optionally train your own BPE), tokenize on a CPU box, write uint16 shards, held-out val split, decontaminate vs eval sets | Tokenized shards in bucket + token count report |
+| 4 | GPUs: pick, rent, benchmark | Compare providers live, rent 1×H100, pinned Docker/uv env, smoke test, measure tokens/s and MFU, auto-shutdown script | Reproducible env + benchmark table |
+| 5 | Baseline: reproduce GPT-2 124M | Multi-GPU (DDP) run on 8×H100, checkpoint to bucket, resume after preemption, W&B dashboard | Baseline checkpoint + loss curves + HellaSwag score |
+| 6 | Make it yours: ablations | Run the improvement ladder on short runs, one change at a time, same seed/tokens; pick your recipe with evidence | Ablation table + chosen recipe (config) |
+| 7 | The main run | Launch your model on 8×H100, monitor loss spikes, handle failures, checkpoint/resume, stay on budget | Your base model weights |
+| 8 | Evaluate honestly | lm-eval-harness (HellaSwag, ARC, PIQA, …), compare to OpenAI GPT-2 and your baseline, contamination check | Eval report with tables/plots |
+| 9 | Instruction tuning (SFT) | Pick an open SFT dataset (e.g. SmolTalk), chat template, loss masking, train, sanity-chat | Chat model checkpoint |
+| 10 | Preference tuning (DPO) | Open preference data (e.g. UltraFeedback binarized), DPO, win-rate vs SFT | Aligned model + win-rate result |
+| 11 | Ship it | Upload to HF Hub with model card, Gradio demo Space, technical report, clean GitHub repo, final cost ledger | Public model + live demo + report (your portfolio piece) |
 
 Every lesson states: what to do, which providers/links, today's price, expected time and cost,
 "how you know it worked", common failures and recovery. Each lesson has a 3–5 question

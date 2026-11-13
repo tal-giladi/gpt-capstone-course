@@ -1,0 +1,57 @@
+- [Home](/)
+- [Glossary](glossary.md)
+
+- **Module 1 — Plan, accounts and guardrails**
+  - [01 · The project, the budget and the spending rules](lessons/module-01/lesson-01.md)
+  - [02 · Accounts, API tokens and secrets](lessons/module-01/lesson-02.md)
+  - [03 · Your project repo and a CPU dry run](lessons/module-01/lesson-03.md)
+  - [Module 1 quiz](assessments/module-01-quiz.md)
+- **Module 2 — Data: find it, license it, store it**
+  - [04 · Choosing pretraining data](lessons/module-02/lesson-01.md)
+  - [05 · Object storage for datasets and checkpoints](lessons/module-02/lesson-02.md)
+  - [06 · Downloading FineWeb-Edu into your bucket](lessons/module-02/lesson-03.md)
+  - [Module 2 quiz](assessments/module-02-quiz.md)
+- **Module 3 — Your tokenizer and token shards**
+  - [07 · Training your own BPE tokenizer](lessons/module-03/lesson-01.md)
+  - [08 · Tokenizing 20B tokens on a rented CPU box](lessons/module-03/lesson-02.md)
+  - [09 · Validation split, decontamination and the token report](lessons/module-03/lesson-03.md)
+  - [Module 3 quiz](assessments/module-03-quiz.md)
+- **Module 4 — GPUs: pick, rent, benchmark**
+  - [10 · Where to rent GPUs and what they cost](lessons/module-04/lesson-01.md)
+  - [11 · Your first H100 box](lessons/module-04/lesson-02.md)
+  - [12 · Benchmarking throughput and fixing the budget](lessons/module-04/lesson-03.md)
+  - [Module 4 quiz](assessments/module-04-quiz.md)
+- **Module 5 — Baseline: reproduce GPT-2 124M**
+  - [13 · The baseline config and a multi-GPU launch](lessons/module-05/lesson-01.md)
+  - [14 · Checkpoints, resume and surviving a dead node](lessons/module-05/lesson-02.md)
+  - [15 · Running the 10B-token baseline](lessons/module-05/lesson-03.md)
+  - [Module 5 quiz](assessments/module-05-quiz.md)
+- **Module 6 — Make it yours: ablations**
+  - [16 · Designing a fair ablation](lessons/module-06/lesson-01.md)
+  - [17 · Architecture ablations](lessons/module-06/lesson-02.md)
+  - [18 · Optimizer and schedule ablations](lessons/module-06/lesson-03.md)
+  - [19 · Sizing the main run and freezing the recipe](lessons/module-06/lesson-04.md)
+  - [Module 6 quiz](assessments/module-06-quiz.md)
+- **Module 7 — The main run**
+  - [20 · Pre-flight checklist and launch](lessons/module-07/lesson-01.md)
+  - [21 · Babysitting a long run](lessons/module-07/lesson-02.md)
+  - [22 · Finishing the run and shutting everything down](lessons/module-07/lesson-03.md)
+  - [Module 7 quiz](assessments/module-07-quiz.md)
+- **Module 8 — Evaluate honestly**
+  - [23 · Setting up lm-eval-harness](lessons/module-08/lesson-01.md)
+  - [24 · Comparing against GPT-2 and your baseline](lessons/module-08/lesson-02.md)
+  - [25 · Writing the evaluation report](lessons/module-08/lesson-03.md)
+  - [Module 8 quiz](assessments/module-08-quiz.md)
+- **Module 9 — Instruction tuning (SFT)**
+  - [26 · Choosing SFT data and a chat template](lessons/module-09/lesson-01.md)
+  - [27 · Running SFT and checking the chat model](lessons/module-09/lesson-02.md)
+  - [Module 9 quiz](assessments/module-09-quiz.md)
+- **Module 10 — Preference tuning (DPO)**
+  - [28 · Preference data and the DPO run](lessons/module-10/lesson-01.md)
+  - [29 · Measuring alignment with a judge](lessons/module-10/lesson-02.md)
+  - [Module 10 quiz](assessments/module-10-quiz.md)
+- **Module 11 — Ship it**
+  - [30 · Publishing the model on Hugging Face](lessons/module-11/lesson-01.md)
+  - [31 · A live demo Space](lessons/module-11/lesson-02.md)
+  - [32 · The technical report and final cost ledger](lessons/module-11/lesson-03.md)
+  - [Module 11 quiz](assessments/module-11-quiz.md)
