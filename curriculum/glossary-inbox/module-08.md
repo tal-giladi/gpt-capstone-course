@@ -1,0 +1,10 @@
+- **lm-eval-harness** — EleutherAI's open-source benchmark runner (`lm_eval`); this course pins version 0.4.13 and runs every model with one fixed configuration.
+- **0-shot / few-shot** — evaluating with no solved examples in the prompt, or with k of them; numbers from different shot counts are not comparable.
+- **acc vs acc_norm** — lm-eval multiple-choice accuracy from the total log-likelihood of each answer, vs from the log-likelihood divided by the answer's length in characters (tokenizer-independent).
+- **--limit** — lm-eval option that scores only the first N items of each task; for pipeline tests only, never for reported numbers.
+- **Standard error (of a benchmark score)** — about √(p(1−p)/n) for accuracy p on n items; the noise from the finite size of the test set.
+- **Paired bootstrap** — resampling the items both models answered, many times, to get a confidence interval for the difference of their scores; narrower than an unpaired interval because the models' errors are correlated.
+- **Common val set** — the held-out documents of this course tokenized by both tokenizers (`tok/common-val-gpt2/`, `tok/common-val-bpe32k/`), so all models are measured on identical text.
+- **Home-field advantage (evaluation)** — a model scoring better on text from its own training distribution; why FineWeb-Edu bits per byte favours your models over OpenAI's.
+- **Contamination** — benchmark items (or close copies) present in training data, so a model can recall rather than reason; checked here with 13-gram overlap.
+- **Honest-claims checklist** — the list in `EVAL_REPORT.md` that every claim must pass: identical settings, a file behind every number, intervals for "better", named metrics, contamination stated.

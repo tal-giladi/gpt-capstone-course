@@ -1,0 +1,54 @@
+- id: q1
+  question: >-
+    Your 350M model has a val loss of 2.62 nats/token on common-val-bpe32k; GPT-2 medium has 2.95 on
+    common-val-gpt2. What do these two numbers tell you directly?
+  options:
+    - Your model is 0.33 nats better, since both sets contain the same documents.
+    - Nothing yet; convert each to bits per byte with its own tokens-per-byte ratio first.
+    - GPT-2 medium is better, because its larger vocabulary makes each token harder to predict.
+    - Your model is better by about 11%, the relative difference of the two losses.
+  correct: 1
+  explanation: >-
+    The same text is split into different numbers of tokens by the two tokenizers, so loss per token is
+    not comparable. Bits per byte divides out the tokenization and puts both on the same text.
+- id: q2
+  question: >-
+    Your model's bpb on the common val set is 0.86 and GPT-2 medium's is 0.97. How should the report phrase
+    this?
+  options:
+    - Your model is a better language model than GPT-2 medium in general, by about 11%.
+    - The difference is within noise, since bpb has no standard error at this sample size.
+    - It shows nothing, because bits per byte cannot compare models with different tokenizers.
+    - Your model predicts FineWeb-Edu text better; it was trained on it and GPT-2 was not.
+  correct: 3
+  explanation: >-
+    The text is from your training distribution, which gives your models a home-field advantage. The
+    comparison is fair between your own models; against OpenAI's it is evidence about this kind of text,
+    and the benchmarks carry the cross-model claim.
+- id: q3
+  question: >-
+    On ARC-Challenge your model scores 24.1 and GPT-2 medium 23.0; the paired bootstrap interval of the
+    difference is [-1.6, +3.8]. What do you write?
+  options:
+    - No measurable difference on ARC-Challenge; the interval includes 0.
+    - Your model is 1.1 points better on ARC-Challenge, a modest but real gain.
+    - Your model is better with about 70% confidence, so report it as a likely gain.
+    - Rerun both evaluations with a different seed until the interval excludes 0.
+  correct: 0
+  explanation: >-
+    An interval that contains 0 does not support a claim either way, and both models are near the 25% chance
+    level anyway. Rerunning the same deterministic evaluation does not add information; more items would.
+- id: q4
+  question: >-
+    Module 3 removed training documents that share a 13-gram with HellaSwag, ARC and PIQA items. What can
+    the report honestly say about contamination?
+  options:
+    - All six benchmarks are clean for all four models, so the comparison is contamination-free.
+    - Nothing, because n-gram checks miss paraphrases and are therefore not worth reporting.
+    - Which tasks were checked for your models and how, and that GPT-2's status is unknown.
+    - Your models are clean on all six tasks, while GPT-2's results are inflated by WebText leaks.
+  correct: 2
+  explanation: >-
+    The check covered four tasks with a 13-gram method that misses paraphrases, WinoGrande and LAMBADA were
+    not checked unless you ran the extra scan, and WebText is unreleased. Stating exactly that is honest;
+    claiming cleanliness or inflation is not supported.

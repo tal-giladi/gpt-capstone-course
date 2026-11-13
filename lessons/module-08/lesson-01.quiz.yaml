@@ -1,0 +1,55 @@
+- id: q1
+  question: >-
+    To save time you evaluate your 350M model with `--limit 200` and get HellaSwag acc_norm 0.47. A
+    colleague's full run of GPT-2 medium shows 0.39. What can you conclude?
+  options:
+    - Your model beats GPT-2 medium by about eight points on HellaSwag.
+    - Nothing yet; 200 items is a noisy, non-random slice, so run the full set.
+    - Your model beats it, but by about half the gap once you allow for noise.
+    - The two numbers compare once you divide the limited score by 200/10,042.
+  correct: 1
+  explanation: >-
+    A 200-item slice has a standard error of about 3.5 points and is the first 200 items, not a random
+    sample; in the course's test, --limit 100 moved GPT-2's score from 0.31 to 0.44. Only full runs with
+    identical settings can share a table.
+- id: q2
+  question: >-
+    Your model and OpenAI's GPT-2 use different tokenizers. Which HellaSwag metric gives them the fairest
+    comparison?
+  options:
+    - acc, since total log-likelihood is the probability the model gives each ending.
+    - The in-training score, since it averages the loss per token of each ending.
+    - acc_norm, which normalises each ending by its length in characters.
+    - acc and acc_norm averaged, since the two errors partly cancel each other out.
+  correct: 2
+  explanation: >-
+    Per-token averaging depends on how each tokenizer splits the ending, and raw totals favour short
+    endings. Normalising by characters is independent of the tokenizer, which is why acc_norm is the
+    course's metric for HellaSwag.
+- id: q3
+  question: >-
+    You want to add MMLU to the suite because "everyone reports it". Your 350M model scores 25.4% on it.
+    What do you do?
+  options:
+    - Report it as the headline result, since MMLU is what readers recognise.
+    - Run it 5-shot instead, which reliably lifts small models well above chance.
+    - Keep it and claim a small knowledge advantage over GPT-2 medium's 25.0%.
+    - Leave it out or mark it as at chance, as guessing gives 25% anyway.
+  correct: 3
+  explanation: >-
+    Below about a billion parameters MMLU sits at chance, so the number measures nothing and invites false
+    claims. Tasks where small models are clearly above chance (HellaSwag, ARC-Easy, PIQA, LAMBADA) carry
+    the comparison.
+- id: q4
+  question: >-
+    You ran your model with `dtype=bfloat16, --batch_size 32` and plan to quote GPT-2's numbers from its
+    model card (HellaSwag 10-shot 31.53). Why is that not acceptable?
+  options:
+    - The card's numbers are few-shot from another setup, so more than the model differs.
+    - The card's numbers were measured in float32, which always scores a few points higher than bf16.
+    - Model cards round to two decimals, which hides differences smaller than a tenth of a point.
+    - HellaSwag changed its validation split after the card was written, so items no longer match.
+  correct: 0
+  explanation: >-
+    10-shot versus 0-shot, a different harness version and different settings all move scores. The only
+    fair comparison is running every model yourself with one configuration, which 08.2 does.

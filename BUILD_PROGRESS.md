@@ -21,7 +21,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Module 5 — Baseline: reproduce GPT-2 124M
 - [x] Module 6 — Make it yours: ablations
 - [x] Module 7 — The main run
-- [ ] Module 8 — Evaluate honestly
+- [x] Module 8 — Evaluate honestly
 - [x] Module 9 — Instruction tuning (SFT)
 - [x] Module 10 — Preference tuning (DPO)
 - [x] Module 11 — Ship it
@@ -29,7 +29,7 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
-- Agent G: Module 7, then Module 8
+- Agent J: labs/common fixes from code-requests 07, 08 and 11
 - (Module 11 done)
 
 ## Decisions

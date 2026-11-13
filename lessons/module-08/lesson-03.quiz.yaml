@@ -1,0 +1,53 @@
+- id: q1
+  question: >-
+    Your intermediate checkpoint at step 36,000 scores 0.6 points higher on HellaSwag (lm-eval) than the
+    final one at 38,146. Which checkpoint goes into the report?
+  options:
+    - Step 36,000, since the report should show the best model you trained.
+    - Both, letting the reader choose the one that fits their own use.
+    - The final one; choosing by test score turns the test set into tuning data.
+    - Step 36,000, but only after rerunning it to confirm the gain is stable.
+  correct: 2
+  explanation: >-
+    Picking among checkpoints by benchmark score is fitting to the benchmark, and 0.6 points is within the
+    task's noise anyway. You froze the final checkpoint before evaluating, and that is what you report.
+- id: q2
+  question: >-
+    Your model beats GPT-2 medium on HellaSwag, ARC-Easy and PIQA with intervals excluding 0; on WinoGrande
+    and ARC-Challenge the intervals include 0. Which summary sentence is honest?
+  options:
+    - The model outperforms GPT-2 medium across the board on standard benchmarks.
+    - Better on three tasks; no measurable difference on the other two.
+    - It is better on three tasks and slightly better or equal on the other two.
+    - It is better on average, since the mean of all six differences is positive.
+  correct: 1
+  explanation: >-
+    Each claim must match its own evidence: three supported gains and two results that do not support
+    either direction. "Slightly better" and "across the board" both claim more than the intervals show.
+- id: q3
+  question: >-
+    A blog post estimates that OpenAI trained GPT-2 medium on about 40B tokens. How do you use it in your
+    compute table?
+  options:
+    - Use it, but round it to "about 40B" so that readers know it is approximate.
+    - Use it and compute GPT-2 medium's FLOPs from it, to show your efficiency gain.
+    - Leave it out entirely, including from caveats, since it is not official.
+    - Write "not published", and mention the estimate with its source if useful.
+  correct: 3
+  explanation: >-
+    The table reports what is known; an unofficial estimate presented as data would make every number
+    derived from it look measured. A clearly sourced side note is fine.
+- id: q4
+  question: >-
+    Your report plots in-training HellaSwag with dashed lines at 0.2945 (GPT-2 124M) and 0.3752 (GPT-2
+    medium). Why do these lines belong on that plot but not in the lm-eval table?
+  options:
+    - They use the same per-token scoring as your in-training eval, not lm-eval acc_norm.
+    - They were measured with GPT-2's tokenizer, which lm-eval cannot load for other models.
+    - They come from an older HellaSwag version that has fewer validation items.
+    - They are few-shot numbers, while the lm-eval table is strictly 0-shot.
+  correct: 0
+  explanation: >-
+    Karpathy's reference values score endings by mean loss per token, as mygpt's in-training eval does, so
+    they compare with your curve. lm-eval's acc_norm normalises by characters and gives GPT-2 124M about
+    0.311, so mixing the two would compare different metrics.

@@ -1,0 +1,119 @@
+- id: q1
+  question: >-
+    You evaluated your model with `dtype=bfloat16` and GPT-2 medium with `dtype=float32` because the latter
+    "is how OpenAI ran it". The table shows a 0.4-point gap on PIQA. What is the problem?
+  options:
+    - None; dtype affects only speed, so the scores are directly comparable.
+    - The settings differ, so part of the gap may be numerics; rerun one to match.
+    - float32 always lowers accuracy on PIQA, so the true gap is larger than shown.
+    - PIQA cannot be run in bf16, so your model's score is the invalid one.
+  correct: 1
+  explanation: >-
+    A fair table changes only the model. Precision can move individual close decisions and therefore scores
+    by tenths of a point, the same size as the gap, so the run with the odd setting must be repeated.
+- id: q2
+  question: >-
+    You want the fairest HellaSwag comparison between your own-tokenizer model and GPT-2 medium. Which
+    number do you put in the table?
+  options:
+    - The in-training score from log.jsonl, since it used all 10,042 items.
+    - lm-eval acc, since it uses the plain total likelihood without corrections.
+    - The mean of lm-eval acc and acc_norm, to balance the two scoring biases.
+    - lm-eval acc_norm, which normalises by characters and ignores tokenization.
+  correct: 3
+  explanation: >-
+    Per-token scoring depends on how each tokenizer splits the endings, and raw totals favour short endings.
+    Character normalisation is tokenizer-independent, and lm-eval makes it reproducible for anyone.
+- id: q3
+  question: >-
+    Your 350M model scores 41.3 on HellaSwag and GPT-2 medium 39.4. Both evaluated the same 10,042 items with
+    --log_samples. Which statistic decides whether to call it a real gain?
+  options:
+    - A paired bootstrap interval of the per-item differences between the two models.
+    - The two standard errors added together, compared with the 1.9-point gap.
+    - The relative improvement of 4.8%, which exceeds the usual 2% noise threshold.
+    - A rerun of both evaluations with a new seed, to see whether the gap repeats.
+  correct: 0
+  explanation: >-
+    Both models answered the same items, so the paired bootstrap uses the correlation between their errors
+    and gives the right, usually narrower, interval. A rerun of a deterministic evaluation adds nothing,
+    and "usual thresholds" are not evidence.
+- id: q4
+  question: >-
+    A teammate suggests comparing models by val loss on common-val-gpt2 for all four, tokenizing everything
+    with GPT-2's tokenizer. Why does that not work for your 350M model?
+  options:
+    - The GPT-2 tokenizer drops characters that your tokenizer keeps, changing the text.
+    - common-val-gpt2 is smaller than common-val-bpe32k, so it holds fewer documents.
+    - Your model only knows its own vocabulary, so GPT-2 token ids are meaningless to it.
+    - It works, but only after converting your model's loss into bits per byte first.
+  correct: 2
+  explanation: >-
+    Token ids index a model's own embedding table; feeding GPT-2 ids to your model gives garbage. The fix
+    is the same text tokenized twice, each model reading its own tokenization, compared in bits per byte.
+- id: q5
+  question: >-
+    Your bpb on the common val set is 0.86, GPT-2 medium's 0.97. A reviewer says "of course, your model
+    trained on FineWeb-Edu". How do you respond in the report?
+  options:
+    - Disagree; the val documents were held out, so there is no advantage at all.
+    - Remove the bpb result, since any comparison involving OpenAI's models is unfair.
+    - Recompute bpb on GPT-2's WebText, which OpenAI released for this purpose.
+    - Agree, label it home-field, and let benchmarks carry the cross-model claim.
+  correct: 3
+  explanation: >-
+    Held-out documents from your training distribution still favour your model, and WebText was never
+    released. bpb stays in the report as a fair comparison between your own models and as context for
+    OpenAI's.
+- id: q6
+  question: >-
+    On ARC-Challenge (1,172 items) all four models score between 21% and 25%. What does the report say?
+  options:
+    - Your model ranks first on ARC-Challenge, since its score is the highest of the four.
+    - All four are near the 25% chance level, so this task does not separate them.
+    - ARC-Challenge must be broken, so it is removed from the table and the average.
+    - GPT-2 medium is worst, which shows WebText lacks science content.
+  correct: 1
+  explanation: >-
+    At about 1.2 points of standard error and near chance, a 4-point spread of four models is not evidence
+    of a ranking. Keeping the row with that statement is honest; removing an inconvenient task is not.
+- id: q7
+  question: >-
+    Module 3 decontaminated your training data against HellaSwag, ARC and PIQA. You did not run the extra
+    scan for WinoGrande and LAMBADA. What does the contamination section say?
+  options:
+    - All tasks are clean, since FineWeb-Edu is an educational web corpus.
+    - Nothing about WinoGrande and LAMBADA, since an unchecked task has no finding.
+    - That WinoGrande and LAMBADA were not checked, next to the four that were.
+    - That LAMBADA results are invalid and must be removed from the report.
+  correct: 2
+  explanation: >-
+    Reporting what was checked, how, and what was not is the honest statement. Silence implies a check that
+    did not happen, while declaring results invalid claims a contamination nobody measured.
+- id: q8
+  question: >-
+    For the report's figure you want HellaSwag against training tokens with GPT-2 reference lines. Which
+    pairing is consistent?
+  options:
+    - Your in-training curve with Karpathy's per-token values 0.2945 and 0.3752.
+    - Your in-training curve with GPT-2's lm-eval acc_norm values from your table.
+    - Your lm-eval final score as a point, with the Open LLM Leaderboard 10-shot lines.
+    - Your in-training curve with GPT-3's published 0-shot numbers as reference lines.
+  correct: 0
+  explanation: >-
+    The in-training evaluation and Karpathy's reference values use the same per-token scoring of the same
+    items, so they belong on one plot. The other pairings mix scoring rules or shot counts.
+- id: q9
+  question: >-
+    Your 350M model ends up 0.6 points below GPT-2 medium on HellaSwag, interval [-1.8, +0.6], while it is
+    clearly better on bpb and LAMBADA. How do you write the headline?
+  options:
+    - Lead with LAMBADA and bpb, and move HellaSwag to an appendix as an outlier.
+    - Rerun the main training with more tokens before publishing any result at all.
+    - No measurable HellaSwag difference, stated next to the other gains and the cost.
+    - Report HellaSwag from the best intermediate checkpoint, where the gap was smaller.
+  correct: 2
+  explanation: >-
+    The interval includes 0, so the honest statement is no measurable difference, next to the gains that
+    are supported and what the model cost. Hiding the task or choosing checkpoints by test score would
+    tune the report to the result.
