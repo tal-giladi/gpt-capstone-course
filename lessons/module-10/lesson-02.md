@@ -58,7 +58,7 @@ Each prompt costs two judge calls (both orders). For 200 prompts with answers of
 | OpenAI `gpt-6-luna` | $0.10 / $0.50 | ~$0.10 | ~$0.05 | Cheap OpenAI judge |
 | OpenAI `gpt-5-nano` | $0.05 / $0.40 | ~$0.07 | ~$0.04 | Cheapest listed |
 
-`judge_winrate.py` calls the standard (non-batch) endpoints, so plan with the standard column. With Anthropic it sends `effort: low` (a verdict needs little reasoning) and the server-side refusal fallback; for Haiku 5.5 a declined request simply stays declined and is counted as `invalid`.
+`judge_winrate.py` calls the standard (non-batch) endpoints, so plan with the standard column. With Anthropic it sends `effort: low` (a verdict needs little reasoning) and the server-side refusal fallback; for Haiku 5.5 a declined request simply stays declined and is counted as `invalid`. `summary.json` splits `invalid` into `invalid_declined` (the judge refused) and `invalid_no_verdict` (a reply without `[[A]]`/`[[B]]`/`[[TIE]]`), and records the judge's real `judge_input_tokens`, `judge_output_tokens` and the `estimated_cost_usd` they imply at the list prices above.
 
 > [!NOTE]
 > API prices change more often than GPU prices. Re-check both pricing pages, rerun `judge_tools.py cost` on your real answers, and write the estimate into `budget.md` before the first paid call.
@@ -174,7 +174,7 @@ python tools/judge_tools.py report judge/final/judgments.jsonl --out judge/final
 cat judge/final/notes.md
 ```
 
-(Use `judge/ans_b01/` instead if DPO-b01 won step 4.) Then check the provider console's usage page and write the actual cost into `budget.md`.
+(Use `judge/ans_b01/` instead if DPO-b01 won step 4.) `judge/final/summary.json` and the two Haiku summaries hold `judge_input_tokens`, `judge_output_tokens` and `estimated_cost_usd`, computed from the token counts the API returned; add the three costs and write the sum into `budget.md`. When the bill appears, check it against the provider console's usage page.
 
 ### 6. Interpret the numbers (15 min)
 
@@ -227,21 +227,21 @@ git add reports/alignment_results.md reports/winrate.json evals/regression.md to
 - `reports/winrate.json` has a win rate, a bootstrap CI, a Wilson CI, the sign-test p-value, the first-position pick rate and mean answer lengths; your note states plainly whether the CI excludes 50%.
 - The Haiku and Opus results for the same pair point in the same direction, or your note explains why not.
 - `evals/regression.md` covers four models and four tasks; no SFT/DPO drop exceeds 2 standard errors, or you have explained the one that does.
-- The API bill in the console is within about 2× of `judge_tools.py cost`, and both lines are in `budget.md`.
+- The summed `estimated_cost_usd` from the three `summary.json` files is within about 2× of `judge_tools.py cost`, the console's usage page agrees with it, and both lines are in `budget.md`.
 
 ## When it goes wrong
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | Many empty answers in `answers` output | The model emitted EOT immediately, or the prompt plus 384 new tokens ran past the 1,024-token context | Check a few with `chat.py`; for long prompts, rerun generation with `--max-new-tokens 256` |
-| `invalid` is large | The judge did not end with `[[A]]`, `[[B]]` or `[[TIE]]`, or refused | Open `judgments.jsonl`; for refusals on unsafe prompts this is expected; above ~10% try another judge model |
+| `invalid` is large (the script prints a WARNING) | The judge refused (`invalid_declined`) or did not end with `[[A]]`, `[[B]]` or `[[TIE]]` (`invalid_no_verdict`) | Open `judgments.jsonl`: invalid rows carry `invalid_reason` and the raw `judge_replies`; refusals on unsafe prompts are expected; above ~10% try another judge model |
 | `prompts` list shorter than 200 when using answer files | Different `--n` or `--seed` than at generation | Rerun with exactly the same `--n` and `--seed` |
 | `AuthenticationError` / 401 | Key not exported in this shell, or revoked | `set -a; . ~/.config/mygpt/secrets.env; set +a`; check `echo ${ANTHROPIC_API_KEY:0:7}` |
 | `RateLimitError` / 429 or slow progress | New-account rate limits | The SDK retries automatically; wait, or run the two Haiku comparisons one after the other |
-| Bill far above the estimate | Long answers (rambling to 384 tokens) or more reasoning tokens than assumed | Check the provider usage page; rerun `cost` with `--thinking-tokens` set to what the usage page shows per call |
+| Bill far above the estimate | Long answers (rambling to 384 tokens) or more reasoning tokens than assumed | Divide `judge_output_tokens` by `judge_calls` in `summary.json`; rerun `cost` with `--thinking-tokens` set to that minus ~60 visible tokens |
 | Win rate ~50% with CI containing 50% | DPO changed little, or the judge cannot separate two weak answers | Report it honestly; look at categories in `judgments.jsonl`; a bigger difference needs a better base model, not a different statistic |
 | lm-eval drops 5+ points after SFT | Too high a learning rate or too many epochs overwrote base skills | Compare with a 1-epoch SFT model; consider the lower learning rate from the 09.2 sweep |
-| `ci95` in `summary.json` goes below 0 | The script's normal approximation on few prompts | Use the bootstrap and Wilson intervals from `judge_tools.py report` |
+| `ci95` in `summary.json` is wider than the bootstrap CI from `judge_tools.py report` | `summary.json` uses a Wilson interval with ties as 0.5 (it treats ties like coin flips); the bootstrap resamples the real 0 / 0.5 / 1 scores | Report the bootstrap CI and the Wilson CI over decided prompts from `judge_tools.py report`, as in step 7 |
 
 ## Artifact
 

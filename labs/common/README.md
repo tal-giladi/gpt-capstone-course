@@ -104,6 +104,15 @@ python scripts/judge_winrate.py --model-a hf/my-gpt-350m-sft --model-b hf/my-gpt
   H200 989, B200 2250, A100 312 TFLOP/s). FLOPs/token = 6N + 12·L·d·T, where N excludes lookup
   tables (wpe, and wte when embeddings are untied).
 - `data_dir: synthetic` generates a learnable toy dataset (used by `smoke_cpu.yaml`).
+- `sft.py` / `dpo.py`: weights loaded and trained in fp32 (`dtype=torch.float32`, master weights)
+  with bf16 autocast on a bf16 GPU (`bf16=True`), so small updates are not rounded away.
+  `--resume` continues from the newest `OUT/checkpoint-*`; `--save-final-only` deletes those
+  checkpoints after the final save; `--dataset-revision SHA` pins a hub dataset. `dpo.py` keeps
+  only prompt/chosen/rejected and fixes a string `prompt` next to message lists (H4, Argilla,
+  Tulu). `sft.py --packing` requires `--attn-implementation flash_attention_2` (or `_3`).
+- `judge_winrate.py`: `summary.json` has the judge's real input/output tokens and the estimated
+  cost at list prices, a Wilson 95% CI (ties = 0.5, always in [0, 1]), and invalid prompts split
+  into declined by the judge vs no parseable verdict (each invalid row keeps the raw replies).
 
 ## Shards
 

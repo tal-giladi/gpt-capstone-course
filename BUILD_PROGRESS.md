@@ -25,11 +25,12 @@ Spec for writers: `curriculum/lesson-spec.md`. Code contract: `curriculum/code-c
 - [x] Module 9 — Instruction tuning (SFT)
 - [x] Module 10 — Preference tuning (DPO)
 - [ ] Module 11 — Ship it
+- [ ] Audit: every module ends in a real artifact the next module consumes; every resource (GPU, CPU box, storage, tracking, model hosting, demo hosting, judge API, code hosting, datasets) has priced alternatives
 - [ ] Final QA (dry-run import 0 problems, links, git clean)
 
 ## Now working
 - Agent G: Module 7, then Module 8
-- Agent H: labs/common fixes from code-requests 09 and 10
+- Agent I: Module 11
 
 ## Decisions
 - Modules numbered 1–11 (plan's 0–10 shifted by one).

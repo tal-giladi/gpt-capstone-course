@@ -111,7 +111,7 @@ bash scripts/sync.sh pull-hf my-gpt-350m-base hf/my-gpt-350m-base
 python -c "from huggingface_hub import HfApi; print(HfApi().dataset_info('HuggingFaceTB/smol-smoltalk').sha)"
 ```
 
-Compare the hash with the one in `reports/sft_data.md`. If it differs, rerun `tools/sft_data_stats.py` (5 minutes) and note the new hash.
+Compare the hash with the one in `reports/sft_data.md`. Steps 4 and 5 pass the recorded hash as `--dataset-revision`, so the run trains on the data you measured even if the dataset changed since; if the hash differs, note it in `reports/sft_data.md`.
 
 ### 3. Check the precision before spending money (1 min)
 
@@ -127,7 +127,7 @@ Both `from_pretrained` lines must say `dtype=torch.float32`. If they say `torch.
 mkdir -p logs
 for lr in 5e-5 2e-4 1e-3; do
   python scripts/sft.py --model hf/my-gpt-350m-base --out runs/sft_lr$lr --lr $lr \
-    --max-samples 30000 --epochs 1 --max-length 1024 \
+    --dataset-revision <sha from reports/sft_data.md> --max-samples 30000 --epochs 1 --max-length 1024 \
     --set gradient_checkpointing=false --set eval_steps=100 --set save_strategy=no \
     2>&1 | tee logs/sft_lr$lr.log
 done
@@ -141,6 +141,7 @@ Each run is ~470 steps with an eval on 2,000 test conversations every 100 steps.
 ```bash
 tmux new -s sft
 python scripts/sft.py --model hf/my-gpt-350m-base --out hf/my-gpt-350m-sft --lr <best_lr> \
+  --dataset-revision <sha from reports/sft_data.md> --save-final-only \
   --max-length 1024 --set gradient_checkpointing=false --set run_name=sft_350m \
   --report-to wandb 2>&1 | tee logs/sft_full.log          # --report-to none without W&B
 ```
@@ -163,15 +164,14 @@ What healthy looks like over the run (ESTIMATE, a plausible pattern rather than 
 - `eval_loss` (every 500 steps) follows it down and flattens in the second epoch. At the start of epoch 2, train `loss` drops by a visible step because the model has seen those conversations; if `eval_loss` starts rising at the same time, the second epoch is over-fitting.
 - `mean_token_accuracy` rises from the base model's level and flattens; `grad_norm` stays in a stable band after warmup, without spikes.
 
-`sft.py` saves a checkpoint every 500 steps in `hf/my-gpt-350m-sft/checkpoint-*` (keeps 2). If the pod dies, the run restarts from step 0; at this size that costs a few dollars, which is less than the time to wire up resuming.
+`sft.py` saves a checkpoint every 500 steps in `hf/my-gpt-350m-sft/checkpoint-*` (keeps 2). If the process crashes while the pod is still up, rerun the same command with `--resume` added: it continues from the newest checkpoint. If the pod itself is gone, the checkpoints went with its disk and the run restarts from step 0; at this size that costs a few dollars. `--save-final-only` deletes the checkpoints (optimizer state, ~4 GB each) once the final model is saved, so the folder holds only what you push.
 
 ### 6. Store the model right away (5 min)
 
 The idle guard stops the pod 20 minutes after training ends, and a stopped pod's container disk is erased. Push the model before you do anything else:
 
 ```bash
-rm -rf hf/my-gpt-350m-sft/checkpoint-*          # optimizer checkpoints, ~4 GB each, not needed any more
-ls -la hf/my-gpt-350m-sft                        # config.json, model.safetensors, tokenizer files, chat_template.jinja
+ls -la hf/my-gpt-350m-sft                        # config.json, model.safetensors, tokenizer files, chat_template.jinja; no checkpoint-*
 bash scripts/sync.sh push-hf my-gpt-350m-sft hf/my-gpt-350m-sft
 bash scripts/sync.sh push logs ckpt/sft_350m/logs    # sweep and full-run logs
 rclone ls r2:mygpt/hf/my-gpt-350m-sft | head

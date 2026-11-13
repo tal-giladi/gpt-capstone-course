@@ -57,3 +57,49 @@ def iter_parquet_texts(path: str, column: str = "text", max_docs: int = 0,
                 n += 1
                 if max_docs and n >= max_docs:
                     return
+
+
+# ---- shared by sft.py / dpo.py (no heavy imports) -------------------------------------------
+
+def hf_checkpoints(out_dir: str) -> list[str]:
+    """HF Trainer checkpoint dirs (OUT/checkpoint-N) sorted by step, oldest first."""
+    if not os.path.isdir(out_dir):
+        return []
+    found = []
+    for name in os.listdir(out_dir):
+        path = os.path.join(out_dir, name)
+        step = name[len("checkpoint-"):]
+        if name.startswith("checkpoint-") and step.isdigit() and os.path.isdir(path):
+            found.append((int(step), path))
+    return [p for _, p in sorted(found)]
+
+
+def resume_checkpoint(out_dir: str, resume: bool) -> str | None:
+    """Path of the newest checkpoint to resume from, or None (fresh start). Prints what it does."""
+    if not resume:
+        return None
+    ckpts = hf_checkpoints(out_dir)
+    if not ckpts:
+        print(f"--resume: no checkpoint-* in {out_dir}, starting from step 0", flush=True)
+        return None
+    print(f"--resume: resuming from {ckpts[-1]}", flush=True)
+    return ckpts[-1]
+
+
+def remove_checkpoints(out_dir: str) -> list[str]:
+    """Delete OUT/checkpoint-* (optimizer state etc.) so OUT holds only the final model."""
+    import shutil
+    removed = hf_checkpoints(out_dir)
+    for path in removed:
+        shutil.rmtree(path)
+    return removed
+
+
+def load_hf_dataset(name: str, config: str | None, split: str, revision: str | None):
+    """load_dataset for a hub id (pinned to `revision` if given) or a local .jsonl/.json file."""
+    from datasets import load_dataset
+    if name.endswith((".jsonl", ".json")):
+        if revision:
+            raise SystemExit("--dataset-revision only applies to hub datasets, not local files")
+        return load_dataset("json", data_files=name, split="train")
+    return load_dataset(name, config, split=split, revision=revision)

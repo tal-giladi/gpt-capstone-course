@@ -84,7 +84,7 @@ TRL truncates with `keep_start`: a long conversation keeps its first turns and l
 | Decision | Choice | Why |
 |---|---|---|
 | Epochs | **2** (`sft.py` default, as in the SmolLM2 recipe) | ~670M trained-on tokens, about 3% of pretraining. One epoch leaves the format less stable; three starts to memorize answers |
-| Packing | **Off** (default) | `--packing` in TRL 1.17 uses padding-free batches, which the TRL docs say need FlashAttention 2/3; `sft.py` loads the default SDPA attention, so packed conversations could attend to each other. Padding wastes some compute, which the estimate below includes |
+| Packing | **Off** (default) | `--packing` in TRL 1.17 uses padding-free batches, which the TRL docs say need FlashAttention 2/3; with the default SDPA attention packed conversations could attend to each other, so `sft.py` refuses `--packing` unless you also pass `--attn-implementation flash_attention_2`. Padding wastes some compute, which the estimate below includes |
 | Loss | **Assistant tokens only** (`--assistant-only-loss`, default on) | Training on user turns teaches the model to write questions too, and wastes 25% of the gradient on text you never want it to produce |
 
 ### The box (prices checked 2026-11-13)
@@ -215,7 +215,7 @@ Create `reports/sft_data.md`:
 - Alternatives considered: smoltalk (all), Tulu 3 SFT mixture, OpenHermes-2.5 -> rejected because ...
 ```
 
-Record the dataset revision: on the dataset page, **Files and versions** shows the latest commit hash. `sft.py` always downloads the current version, so in 09.2 you compare the hash again on the day you train; if it changed, rerun step 4 and note the new hash.
+Record the dataset revision: on the dataset page, **Files and versions** shows the latest commit hash. Without a pin, `sft.py` downloads whatever version is current on the day you train; in 09.2 you pass this hash as `--dataset-revision`, so the run trains on exactly the data you measured here.
 
 ### 7. Commit and add the budget line (2 min)
 

@@ -55,9 +55,9 @@ You have two DPO models in your bucket: `hf/my-gpt-350m-dpo/` (the SmolLM2-360M 
 | Dataset | Size | License | Format for `dpo.py` | Fit |
 |---|---|---|---|---|
 | **`trl-lib/ultrafeedback_binarized`** | 62.1k train / 1k test pairs | Card is empty; it repackages the UltraFeedback binarization, which HuggingFaceH4 publishes under MIT | Ready: conversational `chosen` / `rejected`, scores 1–10 | **Recommended.** `dpo.py` default, the data SmolLM2-360M-Instruct was aligned with |
-| `HuggingFaceH4/ultrafeedback_binarized` | 61,135 `train_prefs` / 2,000 `test_prefs` | MIT | Has a string `prompt` column next to message lists; `dpo.py` fails on that mix ("'list' object has no attribute 'endswith'", reproduced 2026-11-13) | Same data; needs the conversion in step 4 |
-| `argilla/ultrafeedback-binarized-preferences-cleaned` | 60.9k | MIT | Same string-`prompt` issue | Cleaner: pairs chosen by average rating, TruthfulQA prompts removed. Use it if you report TruthfulQA |
-| `allenai/llama-3.1-tulu-3-8b-preference-mixture` | 273k | ODC-BY; some parts non-commercial | Conversational pairs plus a string `prompt` | On-policy data for an 8B model; much larger than a 350M model can use |
+| `HuggingFaceH4/ultrafeedback_binarized` | 61,135 `train_prefs` / 2,000 `test_prefs` | MIT | Has a string `prompt` column next to message lists; TRL rejects that mix ("'list' object has no attribute 'endswith'", reproduced 2026-11-13), so `dpo.py` drops the string column | Same data; pass the split names (step 4) |
+| `argilla/ultrafeedback-binarized-preferences-cleaned` | 60.9k | MIT | Same string `prompt`, dropped by `dpo.py` | Cleaner: pairs chosen by average rating, TruthfulQA prompts removed. Use it if you report TruthfulQA |
+| `allenai/llama-3.1-tulu-3-8b-preference-mixture` | 273k | ODC-BY; some parts non-commercial | Conversational pairs plus a string `prompt`, handled by `dpo.py` | On-policy data for an 8B model; much larger than a 350M model can use |
 | `HuggingFaceTB/smoltalk2` (preference) | 447k (from the Tulu 3 mixture), `think` / `no_think` | Apache-2.0 for new data; sources keep theirs | Needs conversion | Built for SmolLM3-3B with reasoning traces |
 
 How UltraFeedback pairs are made matters for what DPO will learn: four model answers per prompt were scored by GPT-4; the best becomes `chosen`, a random one of the other three `rejected` (H4 card). So the pairs reward what GPT-4 liked in 2023, including, on average, longer answers. Measured through the chat template on 3,000 pairs (GPT-2 tokenizer, 2026-11-13):
@@ -166,26 +166,21 @@ By step 20, `rewards/chosen` and `rewards/rejected` must be non-zero (small, wel
 
 ### 4. Optional: use a different preference dataset
 
-Skip this unless you chose an alternative. The H4 and Argilla versions need their `chosen`/`rejected` columns only (the message lists already include the user turn):
+Skip this unless you chose an alternative. The H4 and Argilla versions have a string `prompt` column next to the `chosen`/`rejected` message lists; `dpo.py` drops it by itself (the message lists already include the user turn, and it prints `dataset: string 'prompt' next to full conversations -> dropped`), so you only change the dataset arguments in the commands below:
 
-```python
-import json, os
-from datasets import load_dataset
-os.makedirs("data", exist_ok=True)
-ds = load_dataset("argilla/ultrafeedback-binarized-preferences-cleaned", split="train")
-with open("data/prefs.jsonl", "w", encoding="utf-8") as f:
-    for r in ds:
-        f.write(json.dumps({"chosen": r["chosen"], "rejected": r["rejected"]}) + "\n")
+```bash
+--dataset HuggingFaceH4/ultrafeedback_binarized --split train_prefs --eval-split test_prefs
+--dataset argilla/ultrafeedback-binarized-preferences-cleaned --eval-split ''     # train split only, no eval metrics
 ```
 
-Then pass `--dataset data/prefs.jsonl` below (a local file has no eval split, so you lose the eval metrics; split off 1,000 lines yourself if you want them).
+Add `--dataset-revision <sha>` (from the dataset page's **Files and versions**) to pin the data you looked at.
 
 ### 5. Run A: the SmolLM2 recipe (30–50 min)
 
 ```bash
 tmux new -s dpo
 python scripts/dpo.py --model hf/my-gpt-350m-sft --out hf/my-gpt-350m-dpo --beta 0.5 --lr 1e-6 --epochs 2 \
-  --set gradient_checkpointing=false --set run_name=dpo_b05 --report-to wandb 2>&1 | tee logs/dpo_b05.log
+  --save-final-only --set gradient_checkpointing=false --set run_name=dpo_b05 --report-to wandb 2>&1 | tee logs/dpo_b05.log
 ```
 
 Watch these, in this order of importance (every 500 steps the `eval_` versions on 1,000 held-out pairs are the honest ones):
@@ -219,7 +214,7 @@ EOF
 
 ```bash
 python scripts/dpo.py --model hf/my-gpt-350m-sft --out hf/my-gpt-350m-dpo-b01 \
-  --set gradient_checkpointing=false --set run_name=dpo_b01 --report-to wandb 2>&1 | tee logs/dpo_b01.log
+  --save-final-only --set gradient_checkpointing=false --set run_name=dpo_b01 --report-to wandb 2>&1 | tee logs/dpo_b01.log
 bash scripts/sync.sh push-hf my-gpt-350m-dpo-b01 hf/my-gpt-350m-dpo-b01
 ```
 
@@ -238,7 +233,7 @@ Expect differences to be subtle: slightly longer, more structured or more polite
 ### 8. Clean up
 
 ```bash
-rm -rf hf/my-gpt-350m-dpo*/checkpoint-* runs/dpo_smoke
+rm -rf runs/dpo_smoke          # --save-final-only already removed the checkpoint-* folders of runs A and B
 git add reports/dpo_runs.md reports/dpo_probe.md reports/dpo_data_stats.json && git commit -m "DPO runs" && git push
 ```
 
@@ -256,12 +251,12 @@ Keep the pod if you start 10.2 now (it generates answers and runs lm-eval on the
 | Symptom | Cause | Fix |
 |---|---|---|
 | All rewards stay `0` and loss stays 0.6931 | Weights not updated: bf16 master weights, or learning rate 0 | `grep -n "dtype=" scripts/dpo.py`; check the `learning_rate` column is non-zero after warmup |
-| `AttributeError: 'list' object has no attribute 'endswith'` | Dataset has a string `prompt` column next to message lists (H4, Argilla, Tulu) | Convert to `chosen`/`rejected` only (step 4) |
+| `AttributeError: 'list' object has no attribute 'endswith'` | Dataset has a string `prompt` column next to message lists (H4, Argilla, Tulu), and your `dpo.py` predates the automatic normalization | Pull the current `labs/common/scripts/dpo.py`; it prints `dataset: string 'prompt' ...` when it fixes the columns (step 4) |
 | `Dropping fully truncated examples` removes many rows | Prompts longer than `--max-length` | Expected for a few percent; if it is more, you passed a smaller `--max-length` |
 | `eval_rewards/accuracies` ~0.5 throughout | Learning rate too small for this beta, or the SFT model cannot tell answers apart at all | Compare with run B; try `--lr 2e-6` with beta 0.5 as a third run (~$1) |
 | Train accuracies near 1.0, eval flat, answers get long and repetitive | Over-optimization on 62k pairs | Prefer the 1-epoch or higher-beta model; never pick a DPO model by its training metrics |
 | `CUDA out of memory` | Long pairs, two sequences each, no gradient checkpointing | `--batch-size 4 --grad-accum 16` (still 64 pairs per step) |
-| Pod stopped mid-run, model lost | Idle guard during a long dataset tokenization on CPU, or the hard stop | Raise `--grace-minutes`; push after every run; rerun the lost one (~$1–2) |
+| Pod stopped mid-run, model lost | Idle guard during a long dataset tokenization on CPU, or the hard stop | Raise `--grace-minutes`; push after every run; rerun the lost one (~$1–2). If only the process died and the pod is up, rerun the same command with `--resume` |
 
 ## Artifact
 
